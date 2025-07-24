@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    container_name: aimarker-test-db
+    environment:
+      POSTGRES_DB: aimarker_test
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d aimarker_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./prisma/migrations:/docker-entrypoint-initdb.d

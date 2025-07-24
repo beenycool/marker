@@ -1,0 +1,267 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model submissions {
+  id         String   @id @default(uuid())
+  user_id    String
+  question   String
+  subject    String?
+  exam_board String?
+  created_at DateTime @default(now())
+  
+  feedback feedback[]
+}
+
+model feedback {
+  id              String   @id @default(uuid())
+  submission_id   String
+  score           Float
+  grade           String
+  created_at      DateTime @default(now())
+  
+  // Enhanced fields for observability and cost tracking
+  ai_provider     String?
+  model_used      String?
+  prompt_version  String?
+  tokens_used     Int?
+  cost_usd        Float?
+  response_time_ms Int?
+  user_rating     Int?     // 1-5 or thumbs up/down (-1, 0, 1)
+  user_feedback   String?  // User's written feedback
+  error_message   String?  // If the request failed
+  retry_count     Int      @default(0)
+  
+  submissions submissions @relation(fields: [submission_id], references: [id])
+  
+  @@index([ai_provider, created_at])
+  @@index([user_rating, created_at])
+  @@index([cost_usd, created_at])
+}
+
+model usage_tracking {
+  id        String   @id @default(uuid())
+  user_id   String
+  date      DateTime
+  count     Int
+  
+  @@unique([user_id, date])
+}
+
+model prompt_versions {
+  id          String   @id @default(uuid())
+  name        String
+  version     String
+  content     String
+  is_active   Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  String
+  
+  @@unique([name, version])
+}
+
+model ab_tests {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  prompt_a_id     String
+  prompt_b_id     String
+  split_ratio     Float    @default(0.5)
+  is_active       Boolean  @default(false)
+  start_date      DateTime @default(now())
+  end_date        DateTime?
+  created_at      DateTime @default(now())
+  
+  prompt_a prompt_versions @relation("PromptA", fields: [prompt_a_id], references: [id])
+  prompt_b prompt_versions @relation("PromptB", fields: [prompt_b_id], references: [id])
+  
+  test_assignments ab_test_assignments[]
+}
+
+model ab_test_assignments {
+  id         String   @id @default(uuid())
+  test_id    String
+  user_id    String
+  variant    String   // 'A' or 'B'
+  assigned_at DateTime @default(now())
+  
+  test ab_tests @relation(fields: [test_id], references: [id])
+  
+  @@unique([test_id, user_id])
+}
+
+model admin_users {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  role       String   // 'admin', 'moderator'
+  created_at DateTime @default(now())
+  last_login DateTime?
+}
+
+model system_metrics {
+  id           String   @id @default(uuid())
+  metric_name  String
+  metric_value Float
+  timestamp    DateTime @default(now())
+  metadata     Json?
+  
+  @@index([metric_name, timestamp])
+}
+
+model user_sessions {
+  id           String   @id @default(uuid())
+  user_id      String
+  session_data Json
+  created_at   DateTime @default(now())
+  expires_at   DateTime
+  
+  @@index([user_id, expires_at])
+}
+
+model golden_test_cases {
+  id                 String   @id @default(uuid())
+  name               String
+  subject            String
+  exam_board         String
+  question           String
+  student_answer     String
+  expected_score_min Int
+  expected_score_max Int
+  expected_grade     String
+  difficulty         String   // 'easy', 'medium', 'hard'
+  tags              String[]
+  created_at         DateTime @default(now())
+  created_by         String
+  
+  test_results golden_test_results[]
+  
+  @@index([subject, difficulty])
+  @@index([created_at])
+}
+
+model golden_test_results {
+  id                String   @id @default(uuid())
+  test_case_id      String
+  prompt_version    String
+  ai_provider       String
+  score             Float
+  grade             String
+  feedback          String
+  passed            Boolean
+  execution_time_ms Int
+  error_message     String?
+  timestamp         DateTime @default(now())
+  
+  test_case golden_test_cases @relation(fields: [test_case_id], references: [id])
+  
+  @@index([prompt_version, timestamp])
+  @@index([ai_provider, timestamp])
+  @@index([passed, timestamp])
+}
+
+model ai_request_logs {
+  id                String   @id @default(uuid())
+  request_id        String   @unique
+  provider_name     String?
+  status            String   // 'success', 'fallback_success', 'backup_success', 'failed'
+  response_time_ms  Int?
+  score             Float?
+  grade             String?
+  attempt_type      String?  // 'standard', 'fallback', 'backup'
+  fallback_strategy String?
+  error_message     String?
+  created_at        DateTime @default(now())
+  
+  @@index([provider_name, created_at])
+  @@index([status, created_at])
+  @@index([created_at])
+}
+
+model cost_tracking {
+  id              String   @id @default(uuid())
+  user_id         String?
+  request_id      String?
+  provider_name   String
+  model_name      String?
+  tokens_used     Int?
+  cost_usd        Float
+  request_type    String   // 'marking', 'ocr', etc.
+  created_at      DateTime @default(now())
+  
+  @@index([user_id, created_at])
+  @@index([provider_name, created_at])
+  @@index([created_at])
+}
+
+model structured_logs {
+  id          String   @id @default(uuid())
+  timestamp   DateTime
+  level       String   // 'debug', 'info', 'warn', 'error'
+  event       String
+  message     String
+  context     Json
+  metrics     Json?
+  tags        String[]
+  created_at  DateTime @default(now())
+  
+  @@index([level, timestamp])
+  @@index([event, timestamp])
+  @@index([timestamp])
+  @@index([tags])
+}
+
+model alert_rules {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  description     String
+  metric          String
+  condition       String   // 'gt', 'lt', 'eq', 'gte', 'lte'
+  threshold       Float
+  window_minutes  Int
+  severity        String   // 'low', 'medium', 'high', 'critical'
+  enabled         Boolean  @default(true)
+  tags            Json?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  alerts alerts[]
+  
+  @@index([enabled, severity])
+  @@index([metric])
+}
+
+model alerts {
+  id           String   @id @default(uuid())
+  rule_id      String
+  message      String
+  severity     String   // 'low', 'medium', 'high', 'critical'
+  status       String   // 'firing', 'resolved'
+  triggered_at DateTime
+  resolved_at  DateTime?
+  metadata     Json
+  
+  rule alert_rules @relation(fields: [rule_id], references: [id])
+  
+  @@index([status, triggered_at])
+  @@index([severity, triggered_at])
+  @@index([rule_id, triggered_at])
+}
+
+model alert_channels {
+  id               String   @id @default(uuid())
+  type             String   // 'email', 'slack', 'webhook', 'discord'
+  config           Json     // Channel-specific configuration
+  severity_filter  String[] // Which severities to alert on
+  enabled          Boolean  @default(true)
+  created_at       DateTime @default(now())
+  
+  @@index([type, enabled])
+}
