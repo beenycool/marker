@@ -1,0 +1,271 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*']
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types: [completed]
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Deploy to staging on develop branch
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event.workflow_run.conclusion == 'success'
+    environment:
+      name: staging
+      url: https://staging.aimarker.co.uk
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations (staging)
+        run: npx prisma db push
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+      - name: Build project for staging
+        run: npm run build
+        env:
+          NODE_ENV: staging
+          NEXT_PUBLIC_APP_URL: https://staging.aimarker.co.uk
+
+      - name: Run smoke tests against staging build
+        run: npm run test:smoke
+
+      - name: Deploy to Cloudflare Pages (Staging)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: aimarker-staging
+          directory: out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run post-deployment health checks
+        run: |
+          sleep 30  # Wait for deployment to propagate
+          curl -f https://staging.aimarker.co.uk/api/health || exit 1
+
+      - name: Notify deployment success
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              target_url: 'https://staging.aimarker.co.uk',
+              description: 'Staging deployment successful',
+              context: 'deployment/staging'
+            })
+
+  # Deploy to production on main branch or tags
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event.workflow_run.conclusion == 'success'
+    environment:
+      name: production
+      url: https://aimarker.co.uk
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run final tests before production
+        run: |
+          npm run test:unit
+          npm run lint
+          npm run type-check
+
+      - name: Create database backup before migration
+        run: |
+          echo "Creating database backup..."
+          # This would use your backup strategy (pg_dump, etc.)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run database migrations (production)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Build project for production
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_APP_URL: https://aimarker.co.uk
+
+      - name: Generate sitemap and robots.txt
+        run: npm run postbuild
+
+      - name: Deploy to Cloudflare Pages (Production)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: aimarker
+          directory: out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Warm up cache
+        run: |
+          echo "Warming up cache..."
+          curl -s https://aimarker.co.uk/ > /dev/null
+          curl -s https://aimarker.co.uk/dashboard > /dev/null
+          curl -s https://aimarker.co.uk/pricing > /dev/null
+
+      - name: Run post-deployment health checks
+        run: |
+          sleep 30  # Wait for deployment to propagate
+          curl -f https://aimarker.co.uk/api/health || exit 1
+          curl -f https://aimarker.co.uk/api/admin/health || exit 1
+
+      - name: Run production smoke tests
+        run: npm run test:smoke:production
+        env:
+          TEST_BASE_URL: https://aimarker.co.uk
+
+      - name: Update monitoring alerts
+        run: |
+          echo "Updating monitoring configuration..."
+          # This would update your monitoring setup (DataDog, Sentry, etc.)
+
+      - name: Create GitHub release (for tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## Changes in this release
+            - Automated release from tag ${{ github.ref }}
+            
+            ## Deployment
+            - ✅ Deployed to production: https://aimarker.co.uk
+            - ✅ Health checks passed
+            - ✅ Smoke tests passed
+          draft: false
+          prerelease: false
+
+      - name: Notify deployment success
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              target_url: 'https://aimarker.co.uk',
+              description: 'Production deployment successful',
+              context: 'deployment/production'
+            })
+
+      - name: Send Slack notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            Production deployment ${{ job.status }}!
+            Repository: ${{ github.repository }}
+            Commit: ${{ github.sha }}
+            URL: https://aimarker.co.uk
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Rollback job (manual trigger)
+  rollback:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    environment:
+      name: production
+      url: https://aimarker.co.uk
+
+    steps:
+      - name: Checkout previous version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.rollback_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy rollback to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: aimarker
+          directory: out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify rollback
+        run: |
+          sleep 30
+          curl -f https://aimarker.co.uk/api/health || exit 1
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'warning'
+          channel: '#deployments'
+          text: |
+            🚨 Production rollback completed!
+            Rolled back to: ${{ github.event.inputs.rollback_sha }}
+            URL: https://aimarker.co.uk
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

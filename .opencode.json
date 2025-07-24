@@ -1,0 +1,61 @@
+{
+  "data": {
+    "directory": ".opencode"
+  },
+  "providers": {
+    "openai": {
+      "apiKey": "your-api-key",
+      "disabled": true
+    },
+    "anthropic": {
+      "apiKey": "your-api-key",
+      "disabled": true
+    },
+    "copilot": {
+      "disabled": "true"
+    },
+    "groq": {
+      "apiKey": "your-api-key",
+      "disabled": "true"
+    },
+    "openrouter": {
+      "apiKey": "your-api-key",
+      "disabled": "false"
+    }
+  },
+  "agents": {
+    "coder": {
+      "model": "moonshotai/kimi-k2:free",
+      "maxTokens": 5000
+    },
+    "task": {
+      "model": "qwen/qwen3-235b-a22b-07-25:free",
+      "maxTokens": 5000
+    },
+    "title": {
+      "model": "qwen/qwen3-235b-a22b-07-25:free",
+      "maxTokens": 80
+    }
+  },
+  "shell": {
+    "path": "/bin/bash",
+    "args": ["-l"]
+  },
+  "mcpServers": {
+    "example": {
+      "type": "stdio",
+      "command": "path/to/mcp-server",
+      "env": [],
+      "args": []
+    }
+  },
+  "lsp": {
+    "go": {
+      "disabled": true,
+      "command": "gopls"
+    }
+  },
+  "debug": true,
+  "debugLSP": true,
+  "autoCompact": true
+}

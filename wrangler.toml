@@ -1,0 +1,65 @@
+main = ".open-next/worker.js"
+name = "aimarker"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+minify = true
+# Use a paid plan to allow larger workers
+workers_dev = true
+
+# Custom domain configuration for aimarker.tech
+routes = [
+  { pattern = "aimarker.tech", custom_domain = true },
+  { pattern = "api.aimarker.tech", custom_domain = true }
+]
+
+# Assets configuration
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# KV namespaces for caching and rate limiting
+[[kv_namespaces]]
+binding = "CACHE"
+id = "83611685737d48fc8e64205e47c7a27f"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "a61a73d62e9740e4bb02bbd8dc97c03e"
+
+# R2 bucket for file storage (OCR images, exports, incremental cache)
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "aimarker-storage"
+
+# R2 bucket for incremental cache
+[[r2_buckets]]
+binding = "CACHE_BUCKET"
+bucket_name = "aimarker-cache"
+
+# Environment variables for production
+[env.production.vars]
+NODE_ENV = "production"
+NEXT_PUBLIC_SUPABASE_URL = "https://tqlnqqrrpzmdpgijxiqk.supabase.co"
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY should be set via wrangler secret put or environment
+
+# Environment variables for preview
+[env.preview.vars]
+NODE_ENV = "preview"
+NEXT_PUBLIC_SUPABASE_URL = "https://tqlnqqrrpzmdpgijxiqk.supabase.co"
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY should be set via wrangler secret put or environment
+
+# Secrets (use wrangler secret put command)
+# Required secrets:
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY
+# - SUPABASE_SERVICE_ROLE_KEY
+# - DATABASE_URL
+# - STACK_SECRET_SERVER_KEY
+# - UPSTASH_REDIS_REST_URL
+# - UPSTASH_REDIS_REST_TOKEN
+# - OPENROUTER_API_KEY
+# - STRIPE_SECRET_KEY
+# - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+# - SENTRY_DSN (optional)
+# - SENTRY_AUTH_TOKEN (optional)
+#
+# Set secrets using: wrangler secret put SECRET_NAME
