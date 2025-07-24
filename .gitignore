@@ -84,6 +84,7 @@ wrangler.toml.local
 
 # OpenNext
 .open-next/
+**/next-env.mjs
 
 # Local database files
 *.db
