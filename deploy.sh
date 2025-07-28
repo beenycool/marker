@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Simple AIMARKER Deployment Script (No sudo required)
+# AIMARKER No-Sudo Deployment Script
 set -e
 
 # Colors
@@ -13,38 +13,29 @@ NC='\033[0m'
 PROJECT_NAME="aimarker"
 APP_DIR="$HOME/${PROJECT_NAME}"
 
-echo -e "${BLUE}Starting AIMARKER deployment...${NC}"
+echo -e "${BLUE}Starting AIMARKER deployment (no sudo)...${NC}"
 
 # Create directories first
 echo "Creating directories..."
 mkdir -p "$APP_DIR"/{ssl,data/{postgres,redis,ocr-models},backups}
 
-# Now we can safely create log file
-LOG_FILE="$APP_DIR/deploy.log"
-exec > >(tee -a "$LOG_FILE")
-exec 2>&1
-
-echo -e "${GREEN}Directories created successfully${NC}"
-
-# Check Docker
+# Check Docker access (NO SUDO)
 echo "Checking Docker..."
 if ! command -v docker &> /dev/null; then
-    echo -e "${RED}ERROR: Docker not installed${NC}"
+    echo -e "${RED}ERROR: Docker not installed. Please ask your admin to install Docker.${NC}"
     exit 1
 fi
 
 if ! docker ps &> /dev/null; then
-    echo -e "${YELLOW}Trying Docker with sudo...${NC}"
-    if ! sudo docker ps &> /dev/null; then
-        echo -e "${RED}ERROR: Cannot access Docker${NC}"
-        exit 1
-    fi
-    DOCKER_CMD="sudo docker"
-    COMPOSE_CMD="sudo docker compose"
-else
-    DOCKER_CMD="docker"
-    COMPOSE_CMD="docker compose"
+    echo -e "${RED}ERROR: Cannot access Docker without sudo.${NC}"
+    echo -e "${YELLOW}Please ask your admin to add you to the docker group:${NC}"
+    echo -e "sudo usermod -aG docker $USER"
+    echo -e "Then logout and login again."
+    exit 1
 fi
+
+DOCKER_CMD="docker"
+COMPOSE_CMD="docker compose"
 
 echo -e "${GREEN}Docker is available${NC}"
 
@@ -53,19 +44,21 @@ echo "Copying application files..."
 cp -r . "$APP_DIR/"
 cd "$APP_DIR"
 
-# Create user docker-compose
+# Create user docker-compose (with rootless containers)
 echo "Creating Docker Compose configuration..."
-cat > docker-compose.user.yml << 'EOF'
+cat > docker-compose.nosudo.yml << 'EOF'
 version: '3.8'
 
 services:
   postgres:
     image: postgres:15
     container_name: aimarker_postgres
+    user: "1000:1000"  # Run as current user
     environment:
       POSTGRES_DB: aimarker
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+      PGUSER: postgres
     ports:
       - '8000:5432'
     volumes:
@@ -80,6 +73,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: aimarker_redis
+    user: "1000:1000"  # Run as current user
     ports:
       - '8001:6379'
     volumes:
@@ -157,56 +151,73 @@ STRIPE_SECRET_KEY=your_stripe_key
 NEXT_PUBLIC_POSTHOG_KEY=your_posthog_key
 EOF
 
+# Fix permissions for postgres data directory
+echo "Setting up permissions..."
+chmod 777 data/postgres data/redis data/ocr-models
+
 # Create management scripts
 echo "Creating management scripts..."
 
-cat > start.sh << EOF
+cat > start.sh << 'EOF'
 #!/bin/bash
-cd "$APP_DIR"
-$COMPOSE_CMD -f docker-compose.user.yml up -d
+cd ~/aimarker
+docker compose -f docker-compose.nosudo.yml up -d
 echo "AIMARKER started at: http://localhost:8003"
 EOF
 
-cat > stop.sh << EOF
+cat > stop.sh << 'EOF'
 #!/bin/bash
-cd "$APP_DIR"
-$COMPOSE_CMD -f docker-compose.user.yml down
+cd ~/aimarker
+docker compose -f docker-compose.nosudo.yml down
 EOF
 
-cat > status.sh << EOF
+cat > status.sh << 'EOF'
 #!/bin/bash
-cd "$APP_DIR"
-$COMPOSE_CMD -f docker-compose.user.yml ps
+cd ~/aimarker
+docker compose -f docker-compose.nosudo.yml ps
 EOF
 
-cat > logs.sh << EOF
+cat > logs.sh << 'EOF'
 #!/bin/bash
-cd "$APP_DIR"
-$COMPOSE_CMD -f docker-compose.user.yml logs -f \${1:-}
+cd ~/aimarker
+docker compose -f docker-compose.nosudo.yml logs -f ${1:-}
+EOF
+
+cat > restart.sh << 'EOF'
+#!/bin/bash
+cd ~/aimarker
+docker compose -f docker-compose.nosudo.yml down
+docker compose -f docker-compose.nosudo.yml up -d
+echo "AIMARKER restarted at: http://localhost:8003"
 EOF
 
 chmod +x *.sh
 
 # Deploy
 echo -e "${YELLOW}Building and starting services (this will take several minutes)...${NC}"
-$COMPOSE_CMD -f docker-compose.user.yml build
-$COMPOSE_CMD -f docker-compose.user.yml up -d
+echo "This may take 5-10 minutes to download and build everything..."
+
+docker compose -f docker-compose.nosudo.yml build
+docker compose -f docker-compose.nosudo.yml up -d
 
 echo ""
 echo -e "${GREEN}=== DEPLOYMENT COMPLETE ===${NC}"
 echo -e "App Directory: $APP_DIR"
 echo -e "Access URL: ${GREEN}http://localhost:8003${NC}"
 echo ""
-echo -e "${YELLOW}IMPORTANT: Update your API keys in:${NC}"
+echo -e "${RED}CRITICAL: Update your API keys in:${NC}"
 echo -e "$APP_DIR/.env"
 echo ""
 echo -e "${BLUE}Management Commands:${NC}"
-echo -e "$APP_DIR/start.sh  - Start services"
-echo -e "$APP_DIR/stop.sh   - Stop services" 
-echo -e "$APP_DIR/status.sh - Check status"
-echo -e "$APP_DIR/logs.sh   - View logs"
+echo -e "$APP_DIR/start.sh    - Start services"
+echo -e "$APP_DIR/stop.sh     - Stop services" 
+echo -e "$APP_DIR/restart.sh  - Restart services"
+echo -e "$APP_DIR/status.sh   - Check status"
+echo -e "$APP_DIR/logs.sh     - View logs"
 echo ""
 echo -e "${GREEN}Next steps:${NC}"
-echo -e "1. Edit $APP_DIR/.env with your API keys"
-echo -e "2. Run: $APP_DIR/stop.sh && $APP_DIR/start.sh"
+echo -e "1. Edit $APP_DIR/.env with your Supabase and OpenRouter API keys"
+echo -e "2. Run: $APP_DIR/restart.sh"
 echo -e "3. Open: http://localhost:8003"
+echo ""
+echo -e "${YELLOW}If you see permission errors, your user needs to be in the docker group${NC}"
