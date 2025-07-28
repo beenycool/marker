@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { NextResponse } from 'next/server';
+import { getSupabase } from '@/lib/supabase';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Check database connection
-    const supabase = createClient();
-    const { data, error } = await supabase.from('users').select('count').limit(1);
-    
+    const supabase = await getSupabase();
+    const { error } = await supabase.from('users').select('count').limit(1);
+
     if (error) {
       return NextResponse.json(
         {

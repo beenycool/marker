@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/lib/db';
-import { requireServerAuth } from '@/lib/auth-server';
+import { getCurrentUser } from '@/lib/auth';
 import { successResponse, notFoundResponse } from '@/lib/api-response';
 import { validateSearchParams } from '@/lib/api-wrapper';
 import { logger } from '@/lib/logger';
@@ -24,7 +24,15 @@ const submissionQuerySchema = z.object({
 
 export const GET = async (req: NextRequest) => {
   try {
-    const user = await requireServerAuth();
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return Response.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const validatedParams = validateSearchParams(
       submissionQuerySchema,
@@ -188,7 +196,15 @@ export const GET = async (req: NextRequest) => {
 
 export const DELETE = async (req: NextRequest) => {
   try {
-    const user = await requireServerAuth();
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return Response.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const submissionId = searchParams.get('id');
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireServerAuth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
@@ -17,7 +17,15 @@ const AIFeedbackSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireServerAuth();
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return Response.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     // Validate request body
@@ -103,7 +111,15 @@ async function updateFeedbackAnalytics(
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireServerAuth();
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return Response.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const submissionId = searchParams.get('submissionId');
 

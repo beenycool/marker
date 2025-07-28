@@ -54,3 +54,9 @@ export const withAdminAuth = (handler: any) => handler;
 export const isAuthenticated = () => false;
 export const requireAuth = () => false;
 export const isSummerPromotionActive = () => Promise.resolve(false);
+
+// Usage functions from legacy auth.ts
+export const checkUsageLimit = () =>
+  Promise.resolve({ canUse: true, usedToday: 0, limit: 200 });
+export const incrementUsage = () => Promise.resolve();
+export const getUserSubscriptionTier = () => Promise.resolve('PRO');

@@ -1,12 +1,21 @@
 import { logger } from '@/lib/logger';
 import { stripe } from '@/lib/stripe';
 import { getDb } from '@/lib/db';
-import { requireServerAuth } from '@/lib/auth-server';
+import { getCurrentUser } from '@/lib/auth';
 import { clientEnv } from '@/lib/env';
 
 export const POST = async () => {
   try {
-    const user = await requireServerAuth();
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return Response.json(
+        {
+          error: 'Authentication required',
+        },
+        { status: 401 }
+      );
+    }
 
     // Get user's Stripe customer ID from the database
     const dbClient = await getDb();

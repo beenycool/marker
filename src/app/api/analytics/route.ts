@@ -2,12 +2,19 @@ import { logger } from '@/lib/logger';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { subDays, format } from 'date-fns';
-import { requireServerAuth } from '@/lib/auth-server';
+import { getCurrentUser } from '@/lib/auth';
 import { successResponse } from '@/lib/api-response';
 
 export const GET = async (request: NextRequest) => {
   try {
-    const user = await requireServerAuth();
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return Response.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');
