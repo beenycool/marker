@@ -1,3 +1,5 @@
+// GDPR REMOVAL: All payment processing commented out - collects personal data
+/*
 import Stripe from 'stripe';
 import { getEnvVar } from './cloudflare-env';
 
@@ -48,12 +50,44 @@ export const PLANS = {
       'Basic feedback',
       'Progress tracking',
       'Gemini AI model',
-      'Community support',
     ],
-    limits: {
-      dailyMarks: 20,
-      providers: ['gemini'],
-    },
+  },
+  PRO: {
+    name: 'Pro',
+    price: 9.99,
+    interval: 'month',
+    features: [
+      'Unlimited AI marks',
+      'Advanced feedback',
+      'OCR image uploads',
+      'Priority support',
+      'Multiple AI models',
+      'Export feedback as PDF',
+    ],
+  },
+};
+*/
+
+// GDPR-SAFE: No payment processing
+export const getStripe = () => null;
+export const stripe = null;
+export const getStripeJs = () => null;
+
+export const PRICE_ID = {
+  PRO_MONTHLY: 'price_placeholder_pro_monthly',
+  PRO_YEARLY: 'price_placeholder_pro_yearly',
+};
+
+export const PLANS = {
+  FREE: {
+    name: 'Free',
+    price: 0,
+    interval: 'forever',
+    features: [
+      'Anonymous AI marking',
+      'Basic feedback',
+      'Simple rate limiting',
+    ],
   },
   PRO: {
     name: 'Pro',
@@ -61,18 +95,12 @@ export const PLANS = {
     interval: 'month',
     features: [
       '200 AI marks per day',
-      'Advanced feedback with AO breakdown',
-      'Progress analytics',
       'All AI models (Gemini, Kimi, DeepSeek)',
+      'All GCSE subjects + exam boards',
       'OCR handwriting recognition',
+      'Advanced analytics & insights',
       'Export to Google Classroom',
       'Priority support',
     ],
-    limits: {
-      dailyMarks: 200,
-      providers: ['gemini', 'kimi', 'deepseek'],
-    },
   },
-} as const;
-
-export type PlanType = keyof typeof PLANS;
+};

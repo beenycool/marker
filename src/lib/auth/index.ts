@@ -1,3 +1,5 @@
+// GDPR REMOVAL: All authentication system commented out
+/*
 // Server-side auth functions
 export {
   createServerClient,
@@ -29,3 +31,26 @@ export {
 
 // Re-export types for convenience
 export type { User, Tier } from '@/types';
+*/
+
+// GDPR-SAFE: No authentication - all functions disabled
+export const createServerClient = () => null;
+export const getCurrentUser = () => null;
+export const hasMinimumTier = () => false;
+export const getUserById = () => null;
+export const clearUserCache = () => {};
+
+export const createClientClient = () => null;
+export const signInWithEmail = () => null;
+export const signUpWithEmail = () => null;
+export const signOut = () => {};
+export const getCurrentSession = () => null;
+export const onAuthStateChange = () => {};
+export const resetPassword = () => null;
+export const updatePassword = () => null;
+
+export const withAuth = (handler: any) => handler;
+export const withAdminAuth = (handler: any) => handler;
+export const isAuthenticated = () => false;
+export const requireAuth = () => false;
+export const isSummerPromotionActive = () => Promise.resolve(false);

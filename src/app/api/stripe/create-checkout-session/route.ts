@@ -14,8 +14,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
 
+    // Check if Stripe is available (GDPR compliance)
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Payment processing is currently unavailable' },
+        { status: 503 }
+      );
+    }
+
     // Create Stripe checkout session
-    const checkoutSession = await stripe.checkout.sessions.create({
+    const checkoutSession = await (stripe as any).checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {

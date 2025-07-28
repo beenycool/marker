@@ -20,7 +20,7 @@ export function withAuth(
   options: AuthOptions = {}
 ) {
   return async (req: NextRequest): Promise<NextResponse> => {
-    const { requireAuth = true, requiredTier, redirectTo = '/auth/sign-in' } = options;
+    const { requireAuth = true, requiredTier } = options;
 
     // If auth is not required, just run the handler
     if (!requireAuth) {
@@ -55,13 +55,13 @@ export function withAuth(
  */
 function hasMinimumTier(user: User | null, requiredTier: Tier): boolean {
   if (!user) return false;
-  
+
   const tierHierarchy: Record<Tier, number> = {
-    'FREE': 0,
-    'PRO': 1,
+    FREE: 0,
+    PRO: 1,
   };
-  
-  return tierHierarchy[user.tier] >= tierHierarchy[requiredTier];
+
+  return tierHierarchy[user.subscriptionTier] >= tierHierarchy[requiredTier];
 }
 
 /**
@@ -70,9 +70,9 @@ function hasMinimumTier(user: User | null, requiredTier: Tier): boolean {
 export function withAdminAuth(
   handler: (req: AuthenticatedRequest) => Promise<NextResponse>
 ) {
-  return withAuth(handler, { 
+  return withAuth(handler, {
     requireAuth: true,
-    requiredTier: 'PRO' // Assuming PRO users can access admin features
+    requiredTier: 'PRO', // Assuming PRO users can access admin features
   });
 }
 
@@ -87,13 +87,15 @@ export async function isAuthenticated(): Promise<boolean> {
 /**
  * Require authentication for a page (use in page components)
  */
-export async function requireAuth(redirectTo: string = '/auth/sign-in'): Promise<User> {
+export async function requireAuth(
+  redirectTo: string = '/auth/sign-in'
+): Promise<User> {
   const user = await getCurrentUser();
-  
+
   if (!user) {
     // In a real Next.js app, you'd use redirect() from 'next/navigation'
     throw new Error(`Authentication required. Redirect to: ${redirectTo}`);
   }
-  
+
   return user;
 }

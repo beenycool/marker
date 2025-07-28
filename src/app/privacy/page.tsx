@@ -43,7 +43,9 @@ export default function Privacy() {
               Subscription and payment information (processed securely through
               Stripe)
             </li>
-            <li>Error logs and system monitoring data (via Sentry and Datadog)</li>
+            <li>
+              Error logs and system monitoring data (via Sentry and Datadog)
+            </li>
             <li>Rate limiting and performance data (via Upstash Redis)</li>
             <li>Waitlist registration information</li>
           </ul>
@@ -54,21 +56,53 @@ export default function Privacy() {
             Third-Party Services We Use
           </h2>
           <p className="mb-4">
-            AIMARKER uses the following third-party services to provide our functionality:
+            AIMARKER uses the following third-party services to provide our
+            functionality:
           </p>
           <ul className="list-disc pl-6 mb-4">
-            <li><strong>Supabase:</strong> We use Supabase for our database and authentication to securely store your account information, submissions, and marking history.</li>
-            <li><strong>OpenRouter:</strong> We use OpenRouter to process your answers with AI models like Kimi-v2, DeepSeek v3, and Qwen Pro for marking and feedback generation.</li>
-            <li><strong>Google Gemini:</strong> We use Google's Gemini AI model to analyze and provide feedback on your submissions.</li>
-            <li><strong>PostHog:</strong> We use PostHog to understand how users interact with the website so we can improve it and provide better user experience.</li>
-            <li><strong>Sentry:</strong> We use Sentry to monitor for errors and keep the site running smoothly.</li>
-            <li><strong>Datadog:</strong> We use Datadog for system monitoring and performance tracking to ensure reliable service.</li>
-            <li><strong>Stripe:</strong> We use Stripe for secure payment processing for Pro subscriptions.</li>
-            <li><strong>Upstash Redis:</strong> We use Upstash Redis for rate limiting and caching to optimize performance.</li>
-            <li><strong>EasyOCR:</strong> We use EasyOCR to process handwritten work and convert it to text.</li>
+            <li>
+              <strong>Supabase:</strong> We use Supabase for our database and
+              authentication to securely store your account information,
+              submissions, and marking history.
+            </li>
+            <li>
+              <strong>OpenRouter:</strong> We use OpenRouter to process your
+              answers with AI models like Kimi-v2, DeepSeek v3, and Qwen Pro for
+              marking and feedback generation.
+            </li>
+            <li>
+              <strong>Google Gemini:</strong> We use Google's Gemini AI model to
+              analyze and provide feedback on your submissions.
+            </li>
+            <li>
+              <strong>PostHog:</strong> We use PostHog to understand how users
+              interact with the website so we can improve it and provide better
+              user experience.
+            </li>
+            <li>
+              <strong>Sentry:</strong> We use Sentry to monitor for errors and
+              keep the site running smoothly.
+            </li>
+            <li>
+              <strong>Datadog:</strong> We use Datadog for system monitoring and
+              performance tracking to ensure reliable service.
+            </li>
+            <li>
+              <strong>Stripe:</strong> We use Stripe for secure payment
+              processing for Pro subscriptions.
+            </li>
+            <li>
+              <strong>Upstash Redis:</strong> We use Upstash Redis for rate
+              limiting and caching to optimize performance.
+            </li>
+            <li>
+              <strong>EasyOCR:</strong> We use EasyOCR to process handwritten
+              work and convert it to text.
+            </li>
           </ul>
           <p className="mb-4">
-            Each service processes data according to their own privacy policies and security standards.
+            Each service processes data according to their own privacy policies
+            and security standards.
           </p>
         </section>
 
@@ -135,10 +169,22 @@ export default function Privacy() {
             You have the following rights regarding your personal data:
           </p>
           <ul className="list-disc pl-6 mb-4">
-            <li><strong>Right to Access:</strong> You can request to see what personal data we have about you</li>
-            <li><strong>Right to Correct:</strong> You can ask us to correct any inaccurate personal information</li>
-            <li><strong>Right to Delete:</strong> You can request that we delete your personal data</li>
-            <li><strong>Right to Data Portability:</strong> You can request a copy of your data in a machine-readable format</li>
+            <li>
+              <strong>Right to Access:</strong> You can request to see what
+              personal data we have about you
+            </li>
+            <li>
+              <strong>Right to Correct:</strong> You can ask us to correct any
+              inaccurate personal information
+            </li>
+            <li>
+              <strong>Right to Delete:</strong> You can request that we delete
+              your personal data
+            </li>
+            <li>
+              <strong>Right to Data Portability:</strong> You can request a copy
+              of your data in a machine-readable format
+            </li>
           </ul>
           <p className="mb-4">
             To exercise these rights, please contact us at{' '}
@@ -147,7 +193,9 @@ export default function Privacy() {
               className="text-blue-600 hover:underline"
             >
               support@aimarker.tech
-            </a>. You can also delete your account and associated data through the "Delete Account" button in your account settings.
+            </a>
+            . You can also delete your account and associated data through the
+            "Delete Account" button in your account settings.
           </p>
         </section>
 

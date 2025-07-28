@@ -6,21 +6,20 @@ import { logger } from '@/lib/logger';
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
-    
+
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30d';
-    
+
     const supabase = await getSupabase();
     const now = new Date();
     const daysBack = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-    const startDate = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
-    
+
     // Generate daily trend data
     const trendData = [];
     for (let i = daysBack - 1; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split('T')[0];
-      
+
       // Get daily submissions
       const { data: dailySubmissions } = await supabase
         .from('submissions')
@@ -35,10 +34,17 @@ export async function GET(request: NextRequest) {
         .gte('created_at', `${dateStr}T00:00:00`)
         .lt('created_at', `${dateStr}T23:59:59`);
 
-      const validScores = dailyFeedback?.filter(f => f.score !== null) || [];
-      const avgScore = validScores.length > 0 
-        ? validScores.reduce((sum, f) => sum + f.score, 0) / validScores.length 
-        : 0;
+      const validScores =
+        dailyFeedback?.filter(
+          (f: { score: number | null }) => f.score !== null
+        ) || [];
+      const avgScore =
+        validScores.length > 0
+          ? validScores.reduce(
+              (sum: number, f: { score: number }) => sum + f.score,
+              0
+            ) / validScores.length
+          : 0;
 
       // Mock revenue and user data
       const submissions = dailySubmissions?.length || 0;
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest) {
         revenue: mockRevenue,
         users: mockUsers,
         submissions,
-        avg_score: avgScore
+        avg_score: avgScore,
       });
     }
 

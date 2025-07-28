@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/lib/db';
-import { rateLimiters, checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 const waitlistSchema = z.object({
@@ -12,9 +12,8 @@ const waitlistSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
-    const rateLimitResult = await checkRateLimit(ip, rateLimiters.waitlist);
+    // Rate limiting (GDPR-safe - no IP tracking)
+    const rateLimitResult = await checkRateLimit();
 
     if (!rateLimitResult.success) {
       return NextResponse.json(

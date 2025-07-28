@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,12 +32,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
-import { useMarkSubmission, useMarkingInfo } from '@/hooks/use-marking';
+import { useMarkSubmission } from '@/hooks/use-marking';
 import { FeedbackDisplay } from '@/components/marking/feedback-display';
-import { UsageDisplay } from '@/components/marking/usage-display';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BookOpen, Brain } from 'lucide-react';
-import { UpgradePrompt } from '@/components/subscription/upgrade-prompt';
 
 const markingFormSchema = z.object({
   question: z.string().min(10, 'Question must be at least 10 characters'),
@@ -81,18 +79,10 @@ const examBoards = ['AQA', 'Edexcel', 'OCR', 'WJEC', 'CCEA', 'Other'];
 export function MarkingForm() {
   const [feedback, setFeedback] = useState<any>(null);
   const [isMarking, setIsMarking] = useState(false);
-  const { data: markingInfo, isLoading: infoLoading } = useMarkingInfo();
+  const [isCoolingDown, setIsCoolingDown] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
   const markSubmission = useMarkSubmission();
   const { toast } = useToast();
-  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-
-  const isPro = markingInfo?.userTier === 'PRO';
-
-  useEffect(() => {
-    if (!isPro && markingInfo?.usage && !markingInfo.usage.canUse) {
-      setShowUpgradePrompt(true);
-    }
-  }, [markingInfo, isPro]);
 
   const form = useForm<MarkingFormData>({
     resolver: zodResolver(markingFormSchema),
@@ -129,6 +119,20 @@ export function MarkingForm() {
       setFeedback(result);
       setIsMarking(false);
 
+      // Start cooldown timer
+      setIsCoolingDown(true);
+      setCooldownTime(60); // Cooldown for 60 seconds
+      const cooldownInterval = setInterval(() => {
+        setCooldownTime(prevTime => {
+          if (prevTime <= 1) {
+            clearInterval(cooldownInterval);
+            setIsCoolingDown(false);
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+
       toast({
         title: 'Feedback Generated! 🎉',
         description: `Your work has been marked. Score: ${result.feedback.score}/20 (${result.feedback.grade})`,
@@ -147,32 +151,10 @@ export function MarkingForm() {
     }
   };
 
-  const canSubmit = (markingInfo?.usage?.canUse || isPro) && !isMarking;
-
-  if (infoLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
-  if (showUpgradePrompt) {
-    return (
-      <UpgradePrompt
-        context="limit_reached"
-        currentUsage={markingInfo?.usage?.used}
-        limit={markingInfo?.usage?.limit}
-        onClose={() => setShowUpgradePrompt(false)}
-      />
-    );
-  }
+  const canSubmit = !isMarking && !isCoolingDown;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Usage Display */}
-      <UsageDisplay usage={markingInfo?.usage} />
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Marking Form */}
         <Card className="bg-white/5 backdrop-blur-sm border-white/10">
@@ -335,43 +317,6 @@ export function MarkingForm() {
                       </FormItem>
                     )}
                   />
-
-                  {markingInfo?.userTier === 'PRO' &&
-                    markingInfo?.providers?.length > 1 && (
-                      <FormField
-                        control={form.control}
-                        name="preferredProvider"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-white">
-                              AI Model
-                            </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                                  <SelectValue placeholder="Auto-select" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="">Auto-select</SelectItem>
-                                {markingInfo.providers.map(provider => (
-                                  <SelectItem
-                                    key={provider.name}
-                                    value={provider.name}
-                                  >
-                                    {provider.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
                 </div>
 
                 <FormField
@@ -411,6 +356,8 @@ export function MarkingForm() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Marking in progress...
                     </>
+                  ) : isCoolingDown ? (
+                    `Please wait ${cooldownTime}s`
                   ) : (
                     <>
                       <Brain className="mr-2 h-4 w-4" />
@@ -418,21 +365,6 @@ export function MarkingForm() {
                     </>
                   )}
                 </Button>
-
-                {!canSubmit && markingInfo?.usage && !isPro && (
-                  <p className="text-sm text-red-400 text-center">
-                    Daily limit reached ({markingInfo.usage.used}/
-                    {markingInfo.usage.limit}).{' '}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-red-400"
-                      onClick={() => setShowUpgradePrompt(true)}
-                    >
-                      Upgrade to Pro
-                    </Button>
-                    {' for unlimited marking.'}
-                  </p>
-                )}
               </form>
             </Form>
           </CardContent>

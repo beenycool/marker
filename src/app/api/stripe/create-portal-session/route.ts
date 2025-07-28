@@ -26,7 +26,15 @@ export const POST = async () => {
       );
     }
 
-    const portalSession = await stripe.billingPortal.sessions.create({
+    // Check if Stripe is available (GDPR compliance)
+    if (!stripe) {
+      return Response.json(
+        { error: 'Payment processing is currently unavailable' },
+        { status: 503 }
+      );
+    }
+
+    const portalSession = await (stripe as any).billingPortal.sessions.create({
       customer: userData.stripe_customer_id,
       return_url: `${clientEnv.APP_URL}/settings`,
     });

@@ -1,17 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  UserIcon, 
-  DocumentIcon, 
+import {
+  UserIcon,
+  DocumentIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
+import { logger } from '@/lib/logger';
 
 interface Activity {
   id: string;
-  type: 'user_signup' | 'submission' | 'error' | 'subscription' | 'admin_action';
+  type:
+    | 'user_signup'
+    | 'submission'
+    | 'error'
+    | 'subscription'
+    | 'admin_action';
   message: string;
   timestamp: string;
   user_id?: string;
@@ -31,7 +37,7 @@ export function RecentActivity() {
           setActivities(data.activities || []);
         }
       } catch (error) {
-        console.error('Failed to fetch activity:', error);
+        logger.error('Failed to fetch activity', error);
       } finally {
         setIsLoading(false);
       }
@@ -62,7 +68,9 @@ export function RecentActivity() {
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    );
 
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
@@ -73,7 +81,9 @@ export function RecentActivity() {
   if (isLoading) {
     return (
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          Recent Activity
+        </h3>
         <div className="space-y-4">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="flex items-start space-x-3 animate-pulse">
@@ -97,12 +107,12 @@ export function RecentActivity() {
           {activities.length} events
         </span>
       </div>
-      
+
       <div className="space-y-4">
         {activities.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No recent activity</p>
         ) : (
-          activities.map((activity) => (
+          activities.map(activity => (
             <div key={activity.id} className="flex items-start space-x-3">
               {getActivityIcon(activity.type)}
               <div className="flex-1 min-w-0">
@@ -118,10 +128,10 @@ export function RecentActivity() {
           ))
         )}
       </div>
-      
+
       {activities.length > 0 && (
         <div className="mt-6 pt-4 border-t border-gray-200">
-          <a 
+          <a
             href="/admin/activity/all"
             className="text-sm text-blue-600 hover:text-blue-700 font-medium"
           >

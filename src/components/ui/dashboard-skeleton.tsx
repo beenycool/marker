@@ -1,5 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export function DashboardSkeleton() {
   return (
@@ -36,7 +36,10 @@ export function DashboardSkeleton() {
         {/* Quick actions skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="bg-white/5 backdrop-blur-sm border-white/10">
+            <Card
+              key={i}
+              className="bg-white/5 backdrop-blur-sm border-white/10"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-9 w-9 rounded-lg" />
@@ -56,7 +59,10 @@ export function DashboardSkeleton() {
         {/* Stats overview skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="bg-white/5 backdrop-blur-sm border-white/10">
+            <Card
+              key={i}
+              className="bg-white/5 backdrop-blur-sm border-white/10"
+            >
               <CardHeader className="pb-2">
                 <Skeleton className="h-4 w-24" />
               </CardHeader>
@@ -80,7 +86,10 @@ export function DashboardSkeleton() {
               <CardContent>
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="p-4 rounded-lg bg-white/5 border border-white/10">
+                    <div
+                      key={i}
+                      className="p-4 rounded-lg bg-white/5 border border-white/10"
+                    >
                       <Skeleton className="h-4 w-full mb-2" />
                       <div className="flex justify-between items-center">
                         <Skeleton className="h-3 w-16" />

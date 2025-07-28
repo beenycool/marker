@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 import { getEnvVar } from '../cloudflare-env';
 import { logger } from '../logger';
 import type { User, Tier } from '@/types';
@@ -12,7 +11,7 @@ const CACHE_TTL = 60000; // 1 minute in milliseconds
  * Create a Supabase client for server-side operations
  * This should be used in server components, API routes, and server actions
  */
-export async function createServerClient() {
+export async function createServerClient(cookiesString?: string) {
   const supabaseUrl = await getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
   const supabaseAnonKey = await getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
@@ -20,24 +19,33 @@ export async function createServerClient() {
     throw new Error('Missing Supabase configuration');
   }
 
-  const cookieStore = await cookies();
+  // Parse cookies from string (for Cloudflare Workers compatibility)
+  const parseCookies = (cookieHeader?: string) => {
+    const cookies: Record<string, string> = {};
+    if (cookieHeader) {
+      cookieHeader.split(';').forEach(cookie => {
+        const [name, ...rest] = cookie.trim().split('=');
+        if (name && rest.length > 0) {
+          cookies[name] = rest.join('=');
+        }
+      });
+    }
+    return cookies;
+  };
+
+  const cookies = parseCookies(cookiesString);
 
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storage: {
         getItem: (key: string) => {
-          return cookieStore.get(key)?.value || null;
+          return cookies[key] || null;
         },
         setItem: (key: string, value: string) => {
-          cookieStore.set(key, value, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-          });
+          cookies[key] = value;
         },
         removeItem: (key: string) => {
-          cookieStore.delete(key);
+          delete cookies[key];
         },
       },
     },
@@ -79,7 +87,10 @@ export async function getCurrentUser(): Promise<User | null> {
       .single();
 
     if (error) {
-      logger.error('Error fetching user profile', { error: error.message, userId });
+      logger.error('Error fetching user profile', {
+        error: error.message,
+        userId,
+      });
       return null;
     }
 
@@ -103,7 +114,9 @@ export async function getCurrentUser(): Promise<User | null> {
 
     return user;
   } catch (error) {
-    logger.error('Error in getCurrentUser', { error: error instanceof Error ? error.message : 'Unknown error' });
+    logger.error('Error in getCurrentUser', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return null;
   }
 }
@@ -113,13 +126,13 @@ export async function getCurrentUser(): Promise<User | null> {
  */
 export function hasMinimumTier(user: User | null, requiredTier: Tier): boolean {
   if (!user) return false;
-  
+
   const tierHierarchy: Record<Tier, number> = {
-    'FREE': 0,
-    'PRO': 1,
+    FREE: 0,
+    PRO: 1,
   };
-  
-  return tierHierarchy[user.tier] >= tierHierarchy[requiredTier];
+
+  return tierHierarchy[user.subscriptionTier] >= tierHierarchy[requiredTier];
 }
 
 /**
@@ -128,7 +141,7 @@ export function hasMinimumTier(user: User | null, requiredTier: Tier): boolean {
 export async function getUserById(userId: string): Promise<User | null> {
   try {
     const supabase = await createServerClient();
-    
+
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
@@ -154,7 +167,10 @@ export async function getUserById(userId: string): Promise<User | null> {
       updatedAt: profile.updated_at || new Date(),
     };
   } catch (error) {
-    logger.error('Error fetching user by ID', { error: error instanceof Error ? error.message : 'Unknown error', userId });
+    logger.error('Error fetching user by ID', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      userId,
+    });
     return null;
   }
 }

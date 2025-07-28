@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
-    
+
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';
     const metric = searchParams.get('metric') || 'overview';
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     // Calculate date range based on period
     const endDate = new Date();
     let startDate: Date;
-    
+
     switch (period) {
       case '7d':
         startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -37,11 +37,12 @@ export async function GET(request: NextRequest) {
 
     switch (metric) {
       case 'overview':
-        const [businessMetrics, costBreakdown, costProjection] = await Promise.all([
-          businessAnalytics.getBusinessMetrics(startDate, endDate),
-          costTracker.getCostBreakdown(startDate, endDate),
-          costTracker.getCostProjection(),
-        ]);
+        const [businessMetrics, costBreakdown, costProjection] =
+          await Promise.all([
+            businessAnalytics.getBusinessMetrics(startDate, endDate),
+            costTracker.getCostBreakdown(startDate, endDate),
+            costTracker.getCostProjection(),
+          ]);
 
         data = {
           businessMetrics,
@@ -66,12 +67,14 @@ export async function GET(request: NextRequest) {
         break;
 
       case 'costs':
-        const [breakdown, trends, efficiency, optimization] = await Promise.all([
-          costTracker.getCostBreakdown(startDate, endDate),
-          costTracker.getCostTrends(startDate, endDate, 'day'),
-          costTracker.getCostEfficiencyMetrics(startDate, endDate),
-          costTracker.getCostOptimizationSuggestions(),
-        ]);
+        const [breakdown, trends, efficiency, optimization] = await Promise.all(
+          [
+            costTracker.getCostBreakdown(startDate, endDate),
+            costTracker.getCostTrends(startDate, endDate, 'day'),
+            costTracker.getCostEfficiencyMetrics(startDate, endDate),
+            costTracker.getCostOptimizationSuggestions(),
+          ]
+        );
 
         data = {
           breakdown,
@@ -125,11 +128,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'set_budget_alert':
-        await costTracker.setBudgetAlert(
-          params.threshold,
-          params.period,
-          params.alertChannels
-        );
+        await costTracker.setBudgetAlert(params.threshold, params.period);
         break;
 
       default:

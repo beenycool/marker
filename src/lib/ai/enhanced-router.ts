@@ -14,9 +14,11 @@ import { z } from 'zod';
 const MarkingResponseSchema = z.object({
   score: z.number().min(0).max(100),
   grade: z.string().min(1),
-  feedback: z.string().min(10),
-  improvements: z.array(z.string()).optional(),
-  strengths: z.array(z.string()).optional(),
+  aosMet: z.array(z.string()).min(1),
+  improvementSuggestions: z.array(z.string()).min(1),
+  aiResponse: z.string().min(10),
+  modelUsed: z.string().min(1),
+  confidenceScore: z.number().min(0).max(1).optional(),
 });
 
 interface EnhancedProviderConfig {
@@ -79,7 +81,7 @@ export class EnhancedAIRouter {
         provider: new DeepSeekFreeProvider(),
         maxRetries: 3,
         timeout: 15000,
-        reliability: 0.90,
+        reliability: 0.9,
         costPerToken: 0.000005,
         averageResponseTime: 1800,
       },
@@ -136,9 +138,14 @@ export class EnhancedAIRouter {
       }
 
       // Select optimal provider based on reliability and cost
-      const selectedProvider = this.selectOptimalProvider(availableProviders, preferredProvider);
-      
-      logger.info(`Processing request ${requestId} with ${selectedProvider.provider.name}`);
+      const selectedProvider = this.selectOptimalProvider(
+        availableProviders,
+        preferredProvider
+      );
+
+      logger.info(
+        `Processing request ${requestId} with ${selectedProvider.provider.name}`
+      );
 
       // Try primary approach with full validation
       let result = await this.attemptMarkingWithProvider(
@@ -150,14 +157,24 @@ export class EnhancedAIRouter {
 
       if (result) {
         // Log success and cache result
-        await this.logSuccess(requestId, selectedProvider, result, Date.now() - startTime);
+        await this.logSuccess(
+          requestId,
+          selectedProvider,
+          result,
+          Date.now() - startTime
+        );
         await cacheService.set(request, result);
-        return { ...result, metadata: { requestId, provider: selectedProvider.provider.name } };
+        return {
+          ...result,
+          metadata: { requestId, provider: selectedProvider.provider.name },
+        };
       }
 
       // Primary approach failed, try fallback strategies
-      logger.warn(`Primary approach failed for request ${requestId}, trying fallbacks`);
-      
+      logger.warn(
+        `Primary approach failed for request ${requestId}, trying fallbacks`
+      );
+
       for (const strategy of this.fallbackStrategies) {
         result = await this.attemptMarkingWithProvider(
           selectedProvider,
@@ -168,30 +185,63 @@ export class EnhancedAIRouter {
         );
 
         if (result) {
-          await this.logFallbackSuccess(requestId, selectedProvider, strategy, result, Date.now() - startTime);
+          await this.logFallbackSuccess(
+            requestId,
+            selectedProvider,
+            strategy,
+            result,
+            Date.now() - startTime
+          );
           await cacheService.set(request, result);
-          return { ...result, metadata: { requestId, provider: selectedProvider.provider.name, fallback: strategy.type } };
+          return {
+            ...result,
+            metadata: {
+              requestId,
+              provider: selectedProvider.provider.name,
+              fallback: strategy.type,
+            },
+          };
         }
       }
 
       // Try other providers with fallback strategies
-      const otherProviders = availableProviders.filter(p => p !== selectedProvider);
-      
+      const otherProviders = availableProviders.filter(
+        p => p !== selectedProvider
+      );
+
       for (const provider of otherProviders) {
-        logger.info(`Trying backup provider ${provider.provider.name} for request ${requestId}`);
-        
-        result = await this.attemptMarkingWithProvider(provider, request, requestId, 'backup');
-        
+        logger.info(
+          `Trying backup provider ${provider.provider.name} for request ${requestId}`
+        );
+
+        result = await this.attemptMarkingWithProvider(
+          provider,
+          request,
+          requestId,
+          'backup'
+        );
+
         if (result) {
-          await this.logBackupSuccess(requestId, provider, result, Date.now() - startTime);
+          await this.logBackupSuccess(
+            requestId,
+            provider,
+            result,
+            Date.now() - startTime
+          );
           await cacheService.set(request, result);
-          return { ...result, metadata: { requestId, provider: provider.provider.name, backup: true } };
+          return {
+            ...result,
+            metadata: {
+              requestId,
+              provider: provider.provider.name,
+              backup: true,
+            },
+          };
         }
       }
 
       // All strategies failed
       throw new Error('All providers and fallback strategies failed');
-
     } catch (error) {
       await this.logFailure(requestId, error, Date.now() - startTime);
       throw error;
@@ -209,7 +259,9 @@ export class EnhancedAIRouter {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        logger.info(`${attemptType} attempt ${attempt}/${maxRetries} for ${provider.name} (${requestId})`);
+        logger.info(
+          `${attemptType} attempt ${attempt}/${maxRetries} for ${provider.name} (${requestId})`
+        );
 
         // Modify request for fallback strategies
         let modifiedRequest = request;
@@ -224,7 +276,10 @@ export class EnhancedAIRouter {
         const result = await Promise.race([
           provider.mark(modifiedRequest),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout)
+            setTimeout(
+              () => reject(new Error(`Timeout after ${timeout}ms`)),
+              timeout
+            )
           ),
         ]);
 
@@ -235,13 +290,17 @@ export class EnhancedAIRouter {
         );
 
         if (validatedResult) {
-          logger.info(`Successful ${attemptType} with ${provider.name} (${requestId})`);
+          logger.info(
+            `Successful ${attemptType} with ${provider.name} (${requestId})`
+          );
           return validatedResult;
         }
-
       } catch (error) {
-        logger.warn(`${attemptType} attempt ${attempt} failed for ${provider.name} (${requestId}):`, error);
-        
+        logger.warn(
+          `${attemptType} attempt ${attempt} failed for ${provider.name} (${requestId}):`,
+          { error: error instanceof Error ? error.message : String(error) }
+        );
+
         if (attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
           await this.delay(delay);
@@ -262,7 +321,9 @@ export class EnhancedAIRouter {
       return validated;
     } catch (error) {
       if (validation === 'strict') {
-        logger.warn('Strict validation failed:', error);
+        logger.warn('Strict validation failed:', {
+          error: error instanceof Error ? error.message : String(error),
+        });
         return null;
       }
 
@@ -271,7 +332,12 @@ export class EnhancedAIRouter {
         const sanitized = this.sanitizeResponse(response);
         return MarkingResponseSchema.parse(sanitized);
       } catch (sanitizeError) {
-        logger.warn('Response sanitization failed:', sanitizeError);
+        logger.warn('Response sanitization failed:', {
+          error:
+            sanitizeError instanceof Error
+              ? sanitizeError.message
+              : String(sanitizeError),
+        });
         return null;
       }
     }
@@ -281,7 +347,10 @@ export class EnhancedAIRouter {
     // Try to extract data from malformed responses
     let score = response.score;
     let grade = response.grade;
-    let feedback = response.feedback;
+    let aosMet = response.aosMet || [];
+    let improvementSuggestions = response.improvementSuggestions || [];
+    let aiResponse = response.aiResponse || response.feedback;
+    let modelUsed = response.modelUsed || 'unknown';
 
     // Extract score from text if necessary
     if (typeof score !== 'number') {
@@ -304,16 +373,39 @@ export class EnhancedAIRouter {
       }
     }
 
-    // Ensure feedback exists
-    if (typeof feedback !== 'string' || feedback.length < 10) {
-      feedback = response.improvements || response.comments || 
-                 `Score: ${score}/100. Grade: ${grade}. Please review your work and consider areas for improvement.`;
+    // Ensure aosMet exists
+    if (!Array.isArray(aosMet) || aosMet.length === 0) {
+      aosMet = ['Assessment objectives not specified'];
+    }
+
+    // Ensure improvementSuggestions exists
+    if (
+      !Array.isArray(improvementSuggestions) ||
+      improvementSuggestions.length === 0
+    ) {
+      improvementSuggestions = [
+        'Review your work and consider areas for improvement',
+      ];
+    }
+
+    // Ensure aiResponse exists
+    if (typeof aiResponse !== 'string' || aiResponse.length < 10) {
+      aiResponse =
+        response.improvements ||
+        response.comments ||
+        `Score: ${score}/100. Grade: ${grade}. Please review your work and consider areas for improvement.`;
     }
 
     return {
       score: Math.max(0, Math.min(100, score)),
       grade: grade.toString(),
-      feedback: feedback.slice(0, 2000), // Truncate if too long
+      aosMet,
+      improvementSuggestions,
+      aiResponse: aiResponse.slice(0, 2000), // Truncate if too long
+      modelUsed,
+      confidenceScore: response.confidenceScore
+        ? Number(response.confidenceScore)
+        : undefined,
     };
   }
 
@@ -336,14 +428,22 @@ export class EnhancedAIRouter {
   ): EnhancedProviderConfig {
     // Use preferred provider if specified and available
     if (preferredProvider) {
-      const preferred = availableProviders.find(p => p.provider.name === preferredProvider);
+      const preferred = availableProviders.find(
+        p => p.provider.name === preferredProvider
+      );
       if (preferred) return preferred;
     }
 
     // Sort by reliability score (weighted by cost and speed)
     return availableProviders.sort((a, b) => {
-      const scoreA = a.reliability * 0.7 + (1 - a.costPerToken / 0.00002) * 0.2 + (1 - a.averageResponseTime / 5000) * 0.1;
-      const scoreB = b.reliability * 0.7 + (1 - b.costPerToken / 0.00002) * 0.2 + (1 - b.averageResponseTime / 5000) * 0.1;
+      const scoreA =
+        a.reliability * 0.7 +
+        (1 - a.costPerToken / 0.00002) * 0.2 +
+        (1 - a.averageResponseTime / 5000) * 0.1;
+      const scoreB =
+        b.reliability * 0.7 +
+        (1 - b.costPerToken / 0.00002) * 0.2 +
+        (1 - b.averageResponseTime / 5000) * 0.1;
       return scoreB - scoreA;
     })[0];
   }

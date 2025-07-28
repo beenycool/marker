@@ -12,19 +12,20 @@ const promptSchema = z.object({
   isActive: z.boolean().default(false),
   rolloutPercentage: z.number().min(0).max(100).default(0),
   subject: z.string().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.any()).optional(),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await requireAdmin();
-    
+
     const supabase = await getSupabase();
-    
+
     // Get all prompts with their performance metrics
     const { data: prompts, error } = await supabase
       .from('ai_prompts')
-      .select(`
+      .select(
+        `
         id,
         name,
         version,
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         performance_metrics
-      `)
+      `
+      )
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -61,12 +63,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin();
-    
+
     const body = await request.json();
     const validatedData = promptSchema.parse(body);
-    
+
     const supabase = await getSupabase();
-    
+
     // If this prompt is being set as active, deactivate others with the same name
     if (validatedData.isActive) {
       await supabase
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
         .update({ is_active: false, rollout_percentage: 0 })
         .eq('name', validatedData.name);
     }
-    
+
     const { data: prompt, error } = await supabase
       .from('ai_prompts')
       .insert({
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
         is_active: validatedData.isActive,
         rollout_percentage: validatedData.rolloutPercentage,
         subject: validatedData.subject,
-        metadata: validatedData.metadata || {}
+        metadata: validatedData.metadata || {},
       })
       .select()
       .single();
@@ -101,7 +103,7 @@ export async function POST(request: NextRequest) {
     logger.info('Prompt created successfully', {
       promptId: prompt.id,
       name: prompt.name,
-      version: prompt.version
+      version: prompt.version,
     });
 
     return NextResponse.json(prompt);
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     logger.error('Error in POST /api/admin/prompts:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -124,22 +126,22 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     await requireAdmin();
-    
+
     const { searchParams } = new URL(request.url);
     const promptId = searchParams.get('id');
-    
+
     if (!promptId) {
       return NextResponse.json(
         { error: 'Prompt ID is required' },
         { status: 400 }
       );
     }
-    
+
     const body = await request.json();
     const updates = promptSchema.partial().parse(body);
-    
+
     const supabase = await getSupabase();
-    
+
     // If setting as active, deactivate others with the same name
     if (updates.isActive) {
       const { data: existingPrompt } = await supabase
@@ -147,7 +149,7 @@ export async function PATCH(request: NextRequest) {
         .select('name')
         .eq('id', promptId)
         .single();
-        
+
       if (existingPrompt) {
         await supabase
           .from('ai_prompts')
@@ -156,7 +158,7 @@ export async function PATCH(request: NextRequest) {
           .neq('id', promptId);
       }
     }
-    
+
     const { data: prompt, error } = await supabase
       .from('ai_prompts')
       .update({
@@ -168,7 +170,7 @@ export async function PATCH(request: NextRequest) {
         rollout_percentage: updates.rolloutPercentage,
         subject: updates.subject,
         metadata: updates.metadata,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', promptId)
       .select()
@@ -186,7 +188,7 @@ export async function PATCH(request: NextRequest) {
       promptId: prompt.id,
       name: prompt.name,
       version: prompt.version,
-      updates: Object.keys(updates)
+      updates: Object.keys(updates),
     });
 
     return NextResponse.json(prompt);
@@ -197,7 +199,7 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     logger.error('Error in PATCH /api/admin/prompts:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -209,19 +211,19 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     await requireAdmin();
-    
+
     const { searchParams } = new URL(request.url);
     const promptId = searchParams.get('id');
-    
+
     if (!promptId) {
       return NextResponse.json(
         { error: 'Prompt ID is required' },
         { status: 400 }
       );
     }
-    
+
     const supabase = await getSupabase();
-    
+
     const { error } = await supabase
       .from('ai_prompts')
       .delete()

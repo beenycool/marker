@@ -14,11 +14,11 @@ interface AIFeedbackWidgetProps {
   onFeedbackSubmitted?: (feedback: any) => void;
 }
 
-export function AIFeedbackWidget({ 
-  submissionId, 
-  feedbackId, 
+export function AIFeedbackWidget({
+  submissionId,
+  feedbackId,
   promptVersion,
-  onFeedbackSubmitted 
+  onFeedbackSubmitted,
 }: AIFeedbackWidgetProps) {
   const [rating, setRating] = useState<'helpful' | 'not_helpful' | null>(null);
   const [comment, setComment] = useState('');
@@ -29,9 +29,9 @@ export function AIFeedbackWidget({
 
   const handleRating = async (newRating: 'helpful' | 'not_helpful') => {
     if (submitted) return;
-    
+
     setRating(newRating);
-    
+
     // If rating as not helpful, show comment box
     if (newRating === 'not_helpful') {
       setShowComment(true);
@@ -41,9 +41,12 @@ export function AIFeedbackWidget({
     }
   };
 
-  const submitFeedback = async (feedbackRating: string, feedbackComment: string) => {
+  const submitFeedback = async (
+    feedbackRating: string,
+    feedbackComment: string
+  ) => {
     setSubmitting(true);
-    
+
     try {
       const response = await fetch('/api/feedback/ai-quality', {
         method: 'POST',
@@ -67,21 +70,22 @@ export function AIFeedbackWidget({
       const result = await response.json();
       setSubmitted(true);
       setShowComment(false);
-      
+
       toast({
-        title: "Thank you!",
-        description: "Your feedback helps us improve AI marking quality.",
+        title: 'Thank you!',
+        description: 'Your feedback helps us improve AI marking quality.',
       });
 
       if (onFeedbackSubmitted) {
         onFeedbackSubmitted(result);
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to submit AI feedback:', error);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to submit feedback. Please try again.",
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to submit feedback. Please try again.',
       });
     } finally {
       setSubmitting(false);
@@ -150,7 +154,7 @@ export function AIFeedbackWidget({
               <Textarea
                 placeholder="Tell us what was wrong or how we could improve the feedback..."
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={e => setComment(e.target.value)}
                 className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
                 rows={3}
               />

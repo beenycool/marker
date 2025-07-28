@@ -24,8 +24,16 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
 
+  // Check if Stripe is available (GDPR compliance)
+  if (!stripe) {
+    return Response.json(
+      { error: 'Payment processing is currently unavailable' },
+      { status: 503 }
+    );
+  }
+
   try {
-    event = stripe.webhooks.constructEvent(
+    event = (stripe as any).webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
@@ -45,7 +53,7 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const subscription = await stripe.subscriptions.retrieve(
+        const subscription = await (stripe as any).subscriptions.retrieve(
           session.subscription as string
         );
 

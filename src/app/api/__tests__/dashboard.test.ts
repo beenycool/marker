@@ -6,7 +6,7 @@ describe('Dashboard API', () => {
 
   beforeEach(async () => {
     supabase = await createTestClient();
-    
+
     // Clear test data before each test
     await supabase.from('users').delete().neq('id', '0');
     await supabase.from('submissions').delete().neq('id', '0');
@@ -16,12 +16,16 @@ describe('Dashboard API', () => {
 
   it('should get dashboard data for a user', async () => {
     // Create test user
-    const { data: user } = await supabase.from('users').insert({
-      id: 'test-user-1',
-      email: 'test@example.com',
-      subscription_tier: 'FREE',
-      onboarding_completed: true,
-    }).select().single();
+    const { data: user } = await supabase
+      .from('users')
+      .insert({
+        id: 'test-user-1',
+        email: 'test@example.com',
+        subscription_tier: 'FREE',
+        onboarding_completed: true,
+      })
+      .select()
+      .single();
 
     // Create test submissions
     await supabase.from('submissions').insert([
@@ -40,7 +44,7 @@ describe('Dashboard API', () => {
         answer: 'Paris',
         subject: 'Geography',
         created_at: new Date().toISOString(),
-      }
+      },
     ]);
 
     // Create test feedback
@@ -60,14 +64,14 @@ describe('Dashboard API', () => {
         score: 1,
         grade: 'A',
         created_at: new Date().toISOString(),
-      }
+      },
     ]);
 
     // Call the dashboard API
     const response = await fetch('/api/dashboard', {
       headers: {
-        'Cookie': 'sb-access-token=test-token'
-      }
+        Cookie: 'sb-access-token=test-token',
+      },
     });
 
     expect(response.status).toBe(200);
@@ -75,8 +79,8 @@ describe('Dashboard API', () => {
     expect(data.submissionsCount).toBe(2);
     expect(data.averageScore).toBe(1);
     expect(data.subjectBreakdown).toEqual({
-      'Mathematics': 1,
-      'Geography': 1
+      Mathematics: 1,
+      Geography: 1,
     });
   });
 });

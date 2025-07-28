@@ -60,6 +60,7 @@ export function OCRUpload({ onTextExtracted, disabled }: OCRUploadProps) {
         const isActive = await isSummerPromotionActive();
         setIsSummerPromotion(isActive);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error checking summer promotion:', error);
         setIsSummerPromotion(false);
       }
@@ -85,7 +86,7 @@ export function OCRUpload({ onTextExtracted, disabled }: OCRUploadProps) {
 
     if (!hasProAccess) {
       setShowUpgradePrompt(true);
-      trackUpgradePromptShown('unknown_user', 'pro_feature');
+      trackUpgradePromptShown();
       return;
     }
 
@@ -98,7 +99,7 @@ export function OCRUpload({ onTextExtracted, disabled }: OCRUploadProps) {
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!hasProAccess) {
       setShowUpgradePrompt(true);
-      trackUpgradePromptShown('unknown_user', 'pro_feature');
+      trackUpgradePromptShown();
       e.preventDefault();
       return;
     }
@@ -318,7 +319,7 @@ export function OCRUpload({ onTextExtracted, disabled }: OCRUploadProps) {
               onClick={() => {
                 if (!hasProAccess) {
                   setShowUpgradePrompt(true);
-                  trackUpgradePromptShown('unknown_user', 'pro_feature');
+                  trackUpgradePromptShown();
                 }
               }}
             >

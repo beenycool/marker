@@ -2,12 +2,9 @@ import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabase } from '@/lib/supabase';
-import {
-  successResponse,
-  notFoundResponse,
-} from '@/lib/api-response';
+import { successResponse, notFoundResponse } from '@/lib/api-response';
 import { validateRequestBody, validateSearchParams } from '@/lib/api-wrapper';
-import { handleAPIError, createAuthError, createValidationError } from '@/lib/error-handler';
+import { handleAPIError, createValidationError } from '@/lib/error-handler';
 
 const createFeedbackSchema = z.object({
   submissionId: z.string().uuid(),

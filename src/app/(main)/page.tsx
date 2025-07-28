@@ -1,33 +1,23 @@
-import { Hero } from '@/components/landing/hero';
-import { UKEducation } from '@/components/landing/uk-education';
-import { UnifiedFeatures } from '@/components/landing/unified-features';
-import { HowItWorks } from '@/components/landing/how-it-works';
-import { StudentExperience } from '@/components/landing/student-experience';
-import { SampleQuestions } from '@/components/landing/sample-questions';
-import { Waitlist } from '@/components/landing/waitlist';
-import { FAQ } from '@/components/landing/faq';
-import { Footer } from '@/components/landing/footer';
+import { MarkingForm } from '@/components/forms/marking-form';
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gray-900">
-      <Hero />
-      <UKEducation />
-      <div id="features">
-        <UnifiedFeatures />
+    <div className="min-h-screen bg-gray-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            AI Marking Assistant
+          </h1>
+          <p className="text-gray-300">
+            Submit your GCSE work and get instant, detailed feedback from our AI
+            examiners.
+          </p>
+        </div>
+
+        {/* Main Content */}
+        <MarkingForm />
       </div>
-      <div id="how-it-works">
-        <HowItWorks />
-      </div>
-      <StudentExperience />
-      <div id="sample-questions">
-        <SampleQuestions />
-      </div>
-      <Waitlist />
-      <div id="faq">
-        <FAQ />
-      </div>
-      <Footer />
     </div>
   );
 }

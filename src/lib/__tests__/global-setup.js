@@ -13,12 +13,14 @@ module.exports = async function globalSetup() {
   try {
     // Connect to the database
     await client.connect();
-    
+
     // Set global variables for tests to use
     global.pgClient = client;
-    
+
+    // eslint-disable-next-line no-console
     console.log('✅ Test database connected successfully');
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('❌ Failed to connect to test database:', error);
     throw error;
   }

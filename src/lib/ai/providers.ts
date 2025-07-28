@@ -69,7 +69,7 @@ export abstract class BaseAIProvider implements AIProvider {
       question: request.question,
       answer: request.answer,
       markScheme: request.markScheme,
-      assessmentObjectives: getAssessmentObjectives(subject)
+      assessmentObjectives: getAssessmentObjectives(subject),
     };
 
     const templateIds = [
@@ -78,12 +78,11 @@ export abstract class BaseAIProvider implements AIProvider {
       'marking-criteria',
       'feedback-structure',
       'response-format',
-      'quality-standards'
+      'quality-standards',
     ];
 
     return promptEngine.assemblePrompt(templateIds, variables);
   }
-
 
   /**
    * Parse AI response using strict JSON-only parser

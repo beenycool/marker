@@ -2,13 +2,14 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/lib/db';
 import { requireServerAuth } from '@/lib/auth-server';
-import {
-  successResponse,
-  notFoundResponse,
-} from '@/lib/api-response';
+import { successResponse, notFoundResponse } from '@/lib/api-response';
 import { validateRequestBody } from '@/lib/api-wrapper';
 import { logger } from '@/lib/logger';
-import { handleAPIError, createAuthError, createValidationError } from '@/lib/error-handler';
+import {
+  handleAPIError,
+  createAuthError,
+  createValidationError,
+} from '@/lib/error-handler';
 
 const updateSubmissionSchema = z.object({
   question: z.string().optional(),

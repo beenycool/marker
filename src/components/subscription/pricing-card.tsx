@@ -50,14 +50,28 @@ export function PricingCard({
       }
 
       const stripe = await getStripeJs();
-      if (!stripe) throw new Error('Stripe failed to load');
+      if (!stripe) {
+        toast({
+          title: 'Feature Unavailable',
+          description:
+            'Payment processing is currently disabled for privacy compliance.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: data.sessionId,
-      });
+      // Type assertion to handle the Stripe type issue
+      const stripeClient = stripe as any;
+      if (stripeClient.redirectToCheckout) {
+        const { error } = await stripeClient.redirectToCheckout({
+          sessionId: data.sessionId,
+        });
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          throw new Error(error.message);
+        }
+      } else {
+        throw new Error('Stripe checkout method not available');
       }
     } catch (error) {
       toast({

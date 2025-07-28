@@ -1,75 +1,20 @@
 // Legacy auth file - use /auth/index.ts instead
 // This file is maintained for backward compatibility
 
-import { getCurrentUser as getUser } from './auth/server';
+import { getSupabase } from './supabase';
+import { logger } from './logger';
+import type { Tier } from '@/types';
+import { getEnv } from './env';
 
 export async function getCurrentUser() {
+  if (typeof window !== 'undefined') {
+    // Client-side: return null as this should be handled by auth provider
+    return null;
+  }
+
+  // Server-side: dynamic import to avoid bundling server code in client
+  const { getCurrentUser: getUser } = await import('./auth/server');
   return getUser();
-}
-
-  // Get or create user in database
-  const { data: existingUser, error: _selectError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  let dbUser;
-  if (existingUser) {
-    // Update existing user
-    const { data: updatedUser, error: updateError } = await supabase
-      .from('users')
-      .update({
-        email,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId)
-      .select('*')
-      .single();
-
-    if (updateError) {
-      logger.error('Error updating user:', updateError);
-      return null;
-    }
-    dbUser = updatedUser;
-  } else {
-    // Create new user
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: userId,
-        email,
-        subscription_tier: 'FREE',
-        role: 'STUDENT',
-        onboarding_completed: false,
-      })
-      .select('*')
-      .single();
-
-    if (insertError) {
-      logger.error('Error creating user:', insertError);
-      return null;
-    }
-    dbUser = newUser;
-  }
-
-  // Cache the result
-  userCache.set(cacheKey, {
-    user: dbUser,
-    timestamp: Date.now(),
-  });
-
-  // Clean up old cache entries periodically
-  if (userCache.size > 50) {
-    const now = Date.now();
-    for (const [key, value] of userCache.entries()) {
-      if (now - value.timestamp > CACHE_TTL) {
-        userCache.delete(key);
-      }
-    }
-  }
-
-  return dbUser;
 }
 
 export async function checkUsageLimit(
@@ -78,7 +23,7 @@ export async function checkUsageLimit(
   const supabase = await getSupabase();
 
   // Check if summer promotion is active first
-  const { data: promotionFlag } = await supabase.rpc('is_feature_active', {
+  const { data: _promotionFlag } = await supabase.rpc('is_feature_active', {
     flag_name: 'summer_promotion_2024',
   });
 
@@ -124,7 +69,7 @@ export async function checkUsageLimit(
   }
 
   // Everyone gets Pro limits (200/day)
-  const env = await import('./env').then(m => m.getEnv());
+  const env = await getEnv();
   const limit = env.PRO_TIER_DAILY_LIMIT;
 
   return {
@@ -176,17 +121,34 @@ export async function incrementUsage(userId: string): Promise<void> {
   }
 }
 
-export async function getUserSubscriptionTier(userId: string): Promise<Tier> {
+export async function getUserSubscriptionTier(_userId: string): Promise<Tier> {
   // Everyone gets PRO access
   return 'PRO';
 }
 
 export async function isSummerPromotionActive(): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    // Client-side: return false for now, should be handled by client auth
+    return false;
+  }
+
   const supabase = await getSupabase();
 
-  const { data: promotionFlag } = await supabase.rpc('is_feature_active', {
+  const { data: _promotionFlag } = await supabase.rpc('is_feature_active', {
     flag_name: 'summer_promotion_2024',
   });
 
-  return Boolean(promotionFlag);
+  return Boolean(_promotionFlag);
+}
+
+export async function requireServerAuth() {
+  if (typeof window !== 'undefined') {
+    throw new Error('requireServerAuth can only be used on server side');
+  }
+
+  // Dynamic import to avoid bundling server code in client
+  const { requireServerAuth: serverRequireAuth } = await import(
+    './auth-server'
+  );
+  return serverRequireAuth();
 }

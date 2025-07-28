@@ -29,18 +29,18 @@ export async function POST(request: NextRequest) {
       // Here you would modify the request to use the specific prompt version
       // For now, we'll use the enhanced router
       const result = await enhancedAIRouter.mark(request, 'PRO', aiProvider);
-      return {
-        score: result.score,
-        grade: result.grade,
-        feedback: result.feedback,
-      };
+      // Return the full MarkingResponse without metadata
+      const { metadata, ...markingResponse } = result;
+      return markingResponse;
     };
 
     let results;
 
     if (runFullSuite) {
       // Run the complete test suite
-      logger.info(`Running full golden dataset test suite for prompt ${promptVersion}`);
+      logger.info(
+        `Running full golden dataset test suite for prompt ${promptVersion}`
+      );
       results = await goldenDataset.runFullTestSuite(
         markingFunction,
         promptVersion,
@@ -48,9 +48,13 @@ export async function POST(request: NextRequest) {
       );
     } else if (testCaseIds && testCaseIds.length > 0) {
       // Run specific test cases
-      logger.info(`Running ${testCaseIds.length} test cases for prompt ${promptVersion}`);
+      logger.info(
+        `Running ${testCaseIds.length} test cases for prompt ${promptVersion}`
+      );
       const testCases = await goldenDataset.getAllTestCases();
-      const selectedTestCases = testCases.filter(tc => testCaseIds.includes(tc.id));
+      const selectedTestCases = testCases.filter(tc =>
+        testCaseIds.includes(tc.id)
+      );
 
       const testResults = [];
       for (const testCase of selectedTestCases) {
@@ -69,15 +73,21 @@ export async function POST(request: NextRequest) {
         prompt_version: promptVersion,
         total_tests: testResults.length,
         passed_tests: passedTests.length,
-        pass_rate: testResults.length > 0 ? passedTests.length / testResults.length : 0,
-        average_score: testResults.length > 0 
-          ? testResults.reduce((sum, r) => sum + r.score, 0) / testResults.length 
-          : 0,
+        pass_rate:
+          testResults.length > 0 ? passedTests.length / testResults.length : 0,
+        average_score:
+          testResults.length > 0
+            ? testResults.reduce((sum, r) => sum + r.score, 0) /
+              testResults.length
+            : 0,
         test_results: testResults,
       };
     } else {
       return NextResponse.json(
-        { error: 'Either runFullSuite must be true or testCaseIds must be provided' },
+        {
+          error:
+            'Either runFullSuite must be true or testCaseIds must be provided',
+        },
         { status: 400 }
       );
     }

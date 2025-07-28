@@ -43,7 +43,10 @@ export interface PromptPerformanceReport {
     medium: { pass_rate: number; avg_score: number };
     hard: { pass_rate: number; avg_score: number };
   };
-  performance_by_subject: Record<string, { pass_rate: number; avg_score: number }>;
+  performance_by_subject: Record<
+    string,
+    { pass_rate: number; avg_score: number }
+  >;
   failed_tests: TestResult[];
 }
 
@@ -61,7 +64,9 @@ export class GoldenDatasetManager {
   /**
    * Create a new golden test case
    */
-  async createTestCase(testCase: Omit<GoldenTestCase, 'id' | 'created_at'>): Promise<string> {
+  async createTestCase(
+    testCase: Omit<GoldenTestCase, 'id' | 'created_at'>
+  ): Promise<string> {
     try {
       const { data, error } = await this.supabase
         .from('golden_test_cases')
@@ -123,7 +128,9 @@ export class GoldenDatasetManager {
         query = query.limit(filters.limit);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('created_at', {
+        ascending: false,
+      });
 
       if (error) throw error;
       return data || [];
@@ -147,7 +154,7 @@ export class GoldenDatasetManager {
     try {
       const request: MarkingRequest = {
         question: testCase.question,
-        studentAnswer: testCase.student_answer,
+        answer: testCase.student_answer,
         subject: testCase.subject,
         examBoard: testCase.exam_board,
       };
@@ -163,7 +170,7 @@ export class GoldenDatasetManager {
         ai_provider: aiProvider,
         score: response.score,
         grade: response.grade,
-        feedback: response.feedback,
+        feedback: response.aiResponse,
         passed,
         execution_time_ms: executionTime,
         timestamp: new Date().toISOString(),
@@ -205,7 +212,9 @@ export class GoldenDatasetManager {
       const testCases = await this.getAllTestCases();
       const results: TestResult[] = [];
 
-      logger.info(`Running ${testCases.length} test cases for prompt ${promptVersion}`);
+      logger.info(
+        `Running ${testCases.length} test cases for prompt ${promptVersion}`
+      );
 
       // Run tests in batches to avoid overwhelming the AI provider
       const batchSize = 5;
@@ -250,10 +259,19 @@ export class GoldenDatasetManager {
       ]);
 
       const testCases = await this.getAllTestCases();
-      const reportA = this.generatePerformanceReport(versionA, resultsA, testCases);
-      const reportB = this.generatePerformanceReport(versionB, resultsB, testCases);
+      const reportA = this.generatePerformanceReport(
+        versionA,
+        resultsA,
+        testCases
+      );
+      const reportB = this.generatePerformanceReport(
+        versionB,
+        resultsB,
+        testCases
+      );
 
-      const winner = reportA.pass_rate > reportB.pass_rate ? versionA : versionB;
+      const winner =
+        reportA.pass_rate > reportB.pass_rate ? versionA : versionB;
       const improvement = Math.abs(reportA.pass_rate - reportB.pass_rate);
 
       return {
@@ -285,21 +303,30 @@ export class GoldenDatasetManager {
       const results = await this.getTestResults(activePrompt.version);
       const testCases = await this.getAllTestCases();
 
-      return this.generatePerformanceReport(activePrompt.version, results, testCases);
+      return this.generatePerformanceReport(
+        activePrompt.version,
+        results,
+        testCases
+      );
     } catch (error) {
       logger.error('Error getting production baseline:', error);
       return null;
     }
   }
 
-  private evaluateTestResult(testCase: GoldenTestCase, response: MarkingResponse): boolean {
+  private evaluateTestResult(
+    testCase: GoldenTestCase,
+    response: MarkingResponse
+  ): boolean {
     // Check if score is within expected range
-    const scoreInRange = response.score >= testCase.expected_score_min && 
-                        response.score <= testCase.expected_score_max;
+    const scoreInRange =
+      response.score >= testCase.expected_score_min &&
+      response.score <= testCase.expected_score_max;
 
     // Check if grade matches (allow for close grades)
-    const gradeMatches = response.grade === testCase.expected_grade ||
-                        this.isCloseGrade(response.grade, testCase.expected_grade);
+    const gradeMatches =
+      response.grade === testCase.expected_grade ||
+      this.isCloseGrade(response.grade, testCase.expected_grade);
 
     return scoreInRange && gradeMatches;
   }
@@ -355,11 +382,18 @@ export class GoldenDatasetManager {
       hard: this.calculateDifficultyStats(results, testCases, 'hard'),
     };
 
-    const performanceBySubject: Record<string, { pass_rate: number; avg_score: number }> = {};
+    const performanceBySubject: Record<
+      string,
+      { pass_rate: number; avg_score: number }
+    > = {};
     const subjects = [...new Set(testCases.map(tc => tc.subject))];
 
     subjects.forEach(subject => {
-      performanceBySubject[subject] = this.calculateSubjectStats(results, testCases, subject);
+      performanceBySubject[subject] = this.calculateSubjectStats(
+        results,
+        testCases,
+        subject
+      );
     });
 
     return {
@@ -367,8 +401,15 @@ export class GoldenDatasetManager {
       total_tests: results.length,
       passed_tests: passedTests.length,
       pass_rate: results.length > 0 ? passedTests.length / results.length : 0,
-      average_score: results.length > 0 ? results.reduce((sum, r) => sum + r.score, 0) / results.length : 0,
-      average_execution_time: results.length > 0 ? results.reduce((sum, r) => sum + r.execution_time_ms, 0) / results.length : 0,
+      average_score:
+        results.length > 0
+          ? results.reduce((sum, r) => sum + r.score, 0) / results.length
+          : 0,
+      average_execution_time:
+        results.length > 0
+          ? results.reduce((sum, r) => sum + r.execution_time_ms, 0) /
+            results.length
+          : 0,
       performance_by_difficulty: performanceByDifficulty,
       performance_by_subject: performanceBySubject,
       failed_tests: failedTests,
@@ -380,8 +421,10 @@ export class GoldenDatasetManager {
     testCases: GoldenTestCase[],
     difficulty: string
   ): { pass_rate: number; avg_score: number } {
-    const relevantTestCases = testCases.filter(tc => tc.difficulty === difficulty);
-    const relevantResults = results.filter(r => 
+    const relevantTestCases = testCases.filter(
+      tc => tc.difficulty === difficulty
+    );
+    const relevantResults = results.filter(r =>
       relevantTestCases.some(tc => tc.id === r.test_case_id)
     );
 
@@ -390,7 +433,9 @@ export class GoldenDatasetManager {
     }
 
     const passedCount = relevantResults.filter(r => r.passed).length;
-    const avgScore = relevantResults.reduce((sum, r) => sum + r.score, 0) / relevantResults.length;
+    const avgScore =
+      relevantResults.reduce((sum, r) => sum + r.score, 0) /
+      relevantResults.length;
 
     return {
       pass_rate: passedCount / relevantResults.length,
@@ -404,7 +449,7 @@ export class GoldenDatasetManager {
     subject: string
   ): { pass_rate: number; avg_score: number } {
     const relevantTestCases = testCases.filter(tc => tc.subject === subject);
-    const relevantResults = results.filter(r => 
+    const relevantResults = results.filter(r =>
       relevantTestCases.some(tc => tc.id === r.test_case_id)
     );
 
@@ -413,7 +458,9 @@ export class GoldenDatasetManager {
     }
 
     const passedCount = relevantResults.filter(r => r.passed).length;
-    const avgScore = relevantResults.reduce((sum, r) => sum + r.score, 0) / relevantResults.length;
+    const avgScore =
+      relevantResults.reduce((sum, r) => sum + r.score, 0) /
+      relevantResults.length;
 
     return {
       pass_rate: passedCount / relevantResults.length,

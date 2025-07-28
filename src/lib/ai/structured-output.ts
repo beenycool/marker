@@ -15,62 +15,71 @@ export type StructuredAIResponse = z.infer<typeof AIResponseSchema>;
 
 // Function calling schema for AI providers that support it
 export const markingFunctionSchema = {
-  name: "provide_marking_feedback",
-  description: "Provide structured feedback for a GCSE student submission",
+  name: 'provide_marking_feedback',
+  description: 'Provide structured feedback for a GCSE student submission',
   parameters: {
-    type: "object",
+    type: 'object',
     properties: {
       score: {
-        type: "number",
-        description: "Score out of 100 for the submission",
+        type: 'number',
+        description: 'Score out of 100 for the submission',
         minimum: 0,
-        maximum: 100
+        maximum: 100,
       },
       grade: {
-        type: "string",
-        description: "GCSE grade (1-9 or U for unclassified)",
-        pattern: "^[1-9U]$"
+        type: 'string',
+        description: 'GCSE grade (1-9 or U for unclassified)',
+        pattern: '^[1-9U]$',
       },
       aosMet: {
-        type: "array",
-        description: "List of Assessment Objectives that were met",
+        type: 'array',
+        description: 'List of Assessment Objectives that were met',
         items: {
-          type: "string"
+          type: 'string',
         },
-        minItems: 1
+        minItems: 1,
       },
       improvementSuggestions: {
-        type: "array",
-        description: "Specific suggestions for improvement",
+        type: 'array',
+        description: 'Specific suggestions for improvement',
         items: {
-          type: "string"
+          type: 'string',
         },
-        minItems: 1
+        minItems: 1,
       },
       detailedFeedback: {
-        type: "string",
-        description: "Comprehensive feedback on the submission",
-        minLength: 10
+        type: 'string',
+        description: 'Comprehensive feedback on the submission',
+        minLength: 10,
       },
       confidenceScore: {
-        type: "number",
-        description: "Confidence in the marking (0-1)",
+        type: 'number',
+        description: 'Confidence in the marking (0-1)',
         minimum: 0,
-        maximum: 1
+        maximum: 1,
       },
       reasoning: {
-        type: "string",
-        description: "Brief explanation of the marking rationale",
-        optional: true
-      }
+        type: 'string',
+        description: 'Brief explanation of the marking rationale',
+        optional: true,
+      },
     },
-    required: ["score", "grade", "aosMet", "improvementSuggestions", "detailedFeedback"]
-  }
+    required: [
+      'score',
+      'grade',
+      'aosMet',
+      'improvementSuggestions',
+      'detailedFeedback',
+    ],
+  },
 };
 
 // Enhanced response parser with validation
 export class AIResponseParser {
-  static parseStructuredResponse(response: any, fallbackText?: string): StructuredAIResponse {
+  static parseStructuredResponse(
+    response: any,
+    fallbackText?: string
+  ): StructuredAIResponse {
     try {
       // If response is already structured (from function calling)
       if (typeof response === 'object' && response !== null) {
@@ -107,20 +116,29 @@ export class AIResponseParser {
 
     // Extract grade
     const gradeMatch = text.match(/(?:grade)[:\s]*([1-9U])/i);
-    const grade = gradeMatch ? gradeMatch[1] : this.generateGradeFromScore(score);
+    const grade = gradeMatch
+      ? gradeMatch[1]
+      : this.generateGradeFromScore(score);
 
     // Extract AOs (simple pattern matching)
-    const aoMatch = text.match(/(?:AO|assessment objective)[s]?[:\s]*([^.]+)/gi);
-    const aosMet = aoMatch ? aoMatch.map(ao => ao.trim()) : ['AO1: Content understanding'];
+    const aoMatch = text.match(
+      /(?:AO|assessment objective)[s]?[:\s]*([^.]+)/gi
+    );
+    const aosMet = aoMatch
+      ? aoMatch.map(ao => ao.trim())
+      : ['AO1: Content understanding'];
 
     // Extract improvement suggestions
-    const improvementMatch = text.match(/(?:improve|suggestion|recommendation)[s]?[:\s]*([^.]+)/gi);
-    const improvementSuggestions = improvementMatch ? 
-      improvementMatch.map(imp => imp.trim()) : 
-      ['Review key concepts and provide more detailed examples'];
+    const improvementMatch = text.match(
+      /(?:improve|suggestion|recommendation)[s]?[:\s]*([^.]+)/gi
+    );
+    const improvementSuggestions = improvementMatch
+      ? improvementMatch.map(imp => imp.trim())
+      : ['Review key concepts and provide more detailed examples'];
 
     // Use the full text as detailed feedback if no structured parts found
-    const detailedFeedback = text.length > 20 ? text : 'No detailed feedback provided';
+    const detailedFeedback =
+      text.length > 20 ? text : 'No detailed feedback provided';
 
     return {
       score,
@@ -129,7 +147,7 @@ export class AIResponseParser {
       improvementSuggestions,
       detailedFeedback,
       confidenceScore: 0.6, // Lower confidence for text parsing
-      reasoning: 'Parsed from unstructured text response'
+      reasoning: 'Parsed from unstructured text response',
     };
   }
 
@@ -190,7 +208,7 @@ export class ResponseQualityValidator {
     return {
       isValid: issues.length === 0,
       qualityScore: Math.max(0, qualityScore),
-      issues
+      issues,
     };
   }
 

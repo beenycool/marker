@@ -18,7 +18,6 @@ export async function getSupabase() {
   return supabaseInstance;
 }
 
-
 export type Database = {
   public: {
     Tables: {

@@ -31,6 +31,7 @@ export function SummerPromotionBanner({
         const active = await isSummerPromotionActive();
         setIsActive(active);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error checking summer promotion:', error);
         setIsActive(false);
       }

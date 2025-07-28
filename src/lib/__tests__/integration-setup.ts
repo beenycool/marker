@@ -5,6 +5,6 @@ import { getEnvVar } from '../cloudflare-env';
 export async function createTestClient() {
   const supabaseUrl = 'http://localhost:5433';
   const supabaseAnonKey = 'testpass';
-  
+
   return createClient(supabaseUrl, supabaseAnonKey);
 }

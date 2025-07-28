@@ -2,30 +2,55 @@ import { getSupabase } from '../supabase';
 import { logger } from '../logger';
 import { metrics } from '../observability/metrics';
 
+interface User {
+  id: string;
+  created_at: string;
+  subscription_tier?: string;
+}
+
+interface Submission {
+  id: string;
+  user_id: string;
+  created_at: string;
+}
+
+interface Feedback {
+  score: number | null;
+  user_rating: number | null;
+  response_time_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+interface SubmissionCount {
+  user_id: string;
+  count: number;
+}
+
 export interface BusinessMetrics {
   // User metrics
   totalUsers: number;
   activeUsers: number;
   newSignups: number;
   churnRate: number;
-  
+
   // Revenue metrics
   totalRevenue: number;
   monthlyRecurringRevenue: number;
   averageRevenuePerUser: number;
   conversionRate: number;
-  
+
   // Usage metrics
   totalSubmissions: number;
   submissionsPerUser: number;
   apiUsage: number;
-  
+
   // Cost metrics
   totalCosts: number;
   costPerUser: number;
   aiProviderCosts: Record<string, number>;
   profitMargin: number;
-  
+
   // Quality metrics
   averageScore: number;
   userSatisfaction: number;
@@ -81,7 +106,7 @@ export class BusinessAnalytics {
         qualityMetrics,
       ] = await Promise.all([
         this.getUserMetrics(startDate, endDate),
-        this.getRevenueMetrics(startDate, endDate),
+        this.getRevenueMetrics(endDate),
         this.getUsageMetrics(startDate, endDate),
         this.getCostMetrics(startDate, endDate),
         this.getQualityMetrics(startDate, endDate),
@@ -110,9 +135,9 @@ export class BusinessAnalytics {
     if (usersError) throw usersError;
 
     const totalUsers = allUsers?.length || 0;
-    const newSignups = allUsers?.filter(u => 
-      new Date(u.created_at) >= startDate
-    ).length || 0;
+    const newSignups =
+      allUsers?.filter((u: User) => new Date(u.created_at) >= startDate)
+        .length || 0;
 
     // Get active users (users with activity in the period)
     const { data: activeUserData, error: activeError } = await this.supabase
@@ -123,26 +148,35 @@ export class BusinessAnalytics {
 
     if (activeError) throw activeError;
 
-    const activeUsers = new Set(activeUserData?.map(u => u.user_id) || []).size;
+    const activeUsers = new Set(
+      activeUserData?.map((u: { user_id: string }) => u.user_id) || []
+    ).size;
 
     // Calculate churn rate (simplified - users who were active last period but not this period)
-    const lastPeriodStart = new Date(startDate.getTime() - (endDate.getTime() - startDate.getTime()));
+    const lastPeriodStart = new Date(
+      startDate.getTime() - (endDate.getTime() - startDate.getTime())
+    );
     const { data: lastPeriodActive } = await this.supabase
       .from('usage_tracking')
       .select('user_id')
       .gte('date', lastPeriodStart.toISOString().split('T')[0])
       .lt('date', startDate.toISOString().split('T')[0]);
 
-    const lastPeriodActiveUsers = new Set(lastPeriodActive?.map(u => u.user_id) || []);
-    const currentActiveUsers = new Set(activeUserData?.map(u => u.user_id) || []);
-    
-    const churnedUsers = [...lastPeriodActiveUsers].filter(userId => 
-      !currentActiveUsers.has(userId)
+    const lastPeriodActiveUsers = new Set(
+      lastPeriodActive?.map((u: { user_id: string }) => u.user_id) || []
+    );
+    const currentActiveUsers = new Set(
+      activeUserData?.map((u: { user_id: string }) => u.user_id) || []
+    );
+
+    const churnedUsers = [...lastPeriodActiveUsers].filter(
+      userId => !currentActiveUsers.has(userId)
     ).length;
 
-    const churnRate = lastPeriodActiveUsers.size > 0 
-      ? churnedUsers / lastPeriodActiveUsers.size 
-      : 0;
+    const churnRate =
+      lastPeriodActiveUsers.size > 0
+        ? churnedUsers / lastPeriodActiveUsers.size
+        : 0;
 
     return {
       totalUsers,
@@ -152,7 +186,7 @@ export class BusinessAnalytics {
     };
   }
 
-  private async getRevenueMetrics(startDate: Date, endDate: Date) {
+  private async getRevenueMetrics(endDate: Date) {
     // This would integrate with Stripe API for real revenue data
     // For now, we'll calculate based on subscription assumptions
     const { data: proUsers } = await this.supabase
@@ -163,11 +197,11 @@ export class BusinessAnalytics {
 
     const proUserCount = proUsers?.length || 0;
     const monthlyPrice = 2.99; // £2.99 per month
-    
+
     // Calculate revenue based on pro users
     const totalRevenue = proUserCount * monthlyPrice;
     const monthlyRecurringRevenue = totalRevenue; // Simplified
-    
+
     // Get total users for ARPU calculation
     const { data: allUsers } = await this.supabase
       .from('users')
@@ -178,7 +212,6 @@ export class BusinessAnalytics {
     const averageRevenuePerUser = totalRevenue / totalUsers;
 
     // Calculate conversion rate (free to paid)
-    const freeUsers = totalUsers - proUserCount;
     const conversionRate = totalUsers > 0 ? proUserCount / totalUsers : 0;
 
     return {
@@ -198,8 +231,11 @@ export class BusinessAnalytics {
       .lte('created_at', endDate.toISOString());
 
     const totalSubmissions = submissions?.length || 0;
-    const uniqueUsers = new Set(submissions?.map(s => s.user_id) || []).size;
-    const submissionsPerUser = uniqueUsers > 0 ? totalSubmissions / uniqueUsers : 0;
+    const uniqueUsers = new Set(
+      submissions?.map((s: Submission) => s.user_id) || []
+    ).size;
+    const submissionsPerUser =
+      uniqueUsers > 0 ? totalSubmissions / uniqueUsers : 0;
 
     // Get API usage
     const { data: apiUsageData } = await this.supabase
@@ -208,7 +244,11 @@ export class BusinessAnalytics {
       .gte('date', startDate.toISOString().split('T')[0])
       .lte('date', endDate.toISOString().split('T')[0]);
 
-    const apiUsage = apiUsageData?.reduce((sum, u) => sum + u.count, 0) || 0;
+    const apiUsage =
+      apiUsageData?.reduce(
+        (sum: number, u: { count: number }) => sum + u.count,
+        0
+      ) || 0;
 
     return {
       totalSubmissions,
@@ -225,12 +265,16 @@ export class BusinessAnalytics {
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
-    const totalCosts = costs?.reduce((sum, c) => sum + c.cost_usd, 0) || 0;
+    const totalCosts =
+      costs?.reduce(
+        (sum: number, c: { cost_usd: number }) => sum + c.cost_usd,
+        0
+      ) || 0;
 
     // Group costs by provider
     const aiProviderCosts: Record<string, number> = {};
-    costs?.forEach(cost => {
-      aiProviderCosts[cost.provider_name] = 
+    costs?.forEach((cost: { provider_name: string; cost_usd: number }) => {
+      aiProviderCosts[cost.provider_name] =
         (aiProviderCosts[cost.provider_name] || 0) + cost.cost_usd;
     });
 
@@ -244,10 +288,11 @@ export class BusinessAnalytics {
     const costPerUser = totalCosts / userCount;
 
     // Calculate profit margin (simplified)
-    const revenue = await this.getRevenueMetrics(startDate, endDate);
-    const profitMargin = revenue.totalRevenue > 0 
-      ? (revenue.totalRevenue - totalCosts) / revenue.totalRevenue 
-      : 0;
+    const revenue = await this.getRevenueMetrics(endDate);
+    const profitMargin =
+      revenue.totalRevenue > 0
+        ? (revenue.totalRevenue - totalCosts) / revenue.totalRevenue
+        : 0;
 
     return {
       totalCosts,
@@ -265,24 +310,41 @@ export class BusinessAnalytics {
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
-    const validScores = feedback?.filter(f => f.score !== null).map(f => f.score) || [];
-    const averageScore = validScores.length > 0 
-      ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length 
-      : 0;
+    const validScores =
+      feedback
+        ?.filter((f: Feedback) => f.score !== null)
+        .map((f: Feedback) => f.score) || [];
+    const averageScore =
+      validScores.length > 0
+        ? validScores.reduce((sum: number, score: number) => sum + score, 0) /
+          validScores.length
+        : 0;
 
-    const validRatings = feedback?.filter(f => f.user_rating !== null).map(f => f.user_rating) || [];
-    const userSatisfaction = validRatings.length > 0 
-      ? validRatings.reduce((sum, rating) => sum + rating, 0) / validRatings.length 
-      : 0;
+    const validRatings =
+      feedback
+        ?.filter((f: Feedback) => f.user_rating !== null)
+        .map((f: Feedback) => f.user_rating) || [];
+    const userSatisfaction =
+      validRatings.length > 0
+        ? validRatings.reduce(
+            (sum: number, rating: number) => sum + rating,
+            0
+          ) / validRatings.length
+        : 0;
 
-    const errorCount = feedback?.filter(f => f.error_message !== null).length || 0;
+    const errorCount =
+      feedback?.filter((f: Feedback) => f.error_message !== null).length || 0;
     const errorRate = feedback?.length ? errorCount / feedback.length : 0;
 
-    const responseTimes = feedback?.filter(f => f.response_time_ms !== null).map(f => f.response_time_ms || 0) || [];
-    responseTimes.sort((a, b) => a - b);
-    const responseTimeP95 = responseTimes.length > 0 
-      ? responseTimes[Math.floor(responseTimes.length * 0.95)] 
-      : 0;
+    const responseTimes =
+      feedback
+        ?.filter((f: Feedback) => f.response_time_ms !== null)
+        .map((f: Feedback) => f.response_time_ms || 0) || [];
+    responseTimes.sort((a: number, b: number) => a - b);
+    const responseTimeP95 =
+      responseTimes.length > 0
+        ? responseTimes[Math.floor(responseTimes.length * 0.95)]
+        : 0;
 
     return {
       averageScore,
@@ -306,7 +368,7 @@ export class BusinessAnalytics {
 
       // Group users by month of signup
       const cohorts: Record<string, string[]> = {};
-      users.forEach(user => {
+      users.forEach((user: User) => {
         const cohortMonth = new Date(user.created_at).toISOString().slice(0, 7); // YYYY-MM
         if (!cohorts[cohortMonth]) {
           cohorts[cohortMonth] = [];
@@ -316,7 +378,7 @@ export class BusinessAnalytics {
 
       // Calculate retention for each cohort
       const cohortAnalysis: CohortAnalysis[] = [];
-      
+
       for (const [cohortMonth, userIds] of Object.entries(cohorts)) {
         const cohort: CohortAnalysis = {
           cohort: cohortMonth,
@@ -327,9 +389,18 @@ export class BusinessAnalytics {
 
         // Calculate retention for each subsequent month
         const cohortStart = new Date(cohortMonth + '-01');
-        for (let i = 0; i < 12; i++) { // Look at 12 months of retention
-          const monthStart = new Date(cohortStart.getFullYear(), cohortStart.getMonth() + i, 1);
-          const monthEnd = new Date(cohortStart.getFullYear(), cohortStart.getMonth() + i + 1, 0);
+        for (let i = 0; i < 12; i++) {
+          // Look at 12 months of retention
+          const monthStart = new Date(
+            cohortStart.getFullYear(),
+            cohortStart.getMonth() + i,
+            1
+          );
+          const monthEnd = new Date(
+            cohortStart.getFullYear(),
+            cohortStart.getMonth() + i + 1,
+            0
+          );
           const monthKey = `month_${i}`;
 
           // Get active users from this cohort in this month
@@ -340,7 +411,9 @@ export class BusinessAnalytics {
             .gte('date', monthStart.toISOString().split('T')[0])
             .lte('date', monthEnd.toISOString().split('T')[0]);
 
-          const activeCount = new Set(activeUsers?.map(u => u.user_id) || []).size;
+          const activeCount = new Set(
+            activeUsers?.map((u: { user_id: string }) => u.user_id) || []
+          ).size;
           cohort.retention[monthKey] = activeCount / userIds.length;
 
           // Calculate revenue (simplified - assume PRO users generate £2.99/month)
@@ -368,21 +441,10 @@ export class BusinessAnalytics {
    */
   async getFunnelMetrics(): Promise<FunnelMetrics[]> {
     try {
-      // Define funnel stages
-      const stages = [
-        'Visitor', // Would need web analytics integration
-        'Signup',
-        'First Submission',
-        'Active User (5+ submissions)',
-        'Pro Subscriber',
-      ];
-
       const funnel: FunnelMetrics[] = [];
 
       // Get total signups
-      const { data: allUsers } = await this.supabase
-        .from('users')
-        .select('id');
+      const { data: allUsers } = await this.supabase.from('users').select('id');
       const totalSignups = allUsers?.length || 0;
 
       // Get users with submissions
@@ -390,12 +452,17 @@ export class BusinessAnalytics {
         .from('submissions')
         .select('user_id')
         .limit(1);
-      const uniqueSubmitters = new Set(usersWithSubmissions?.map(s => s.user_id) || []).size;
+      const uniqueSubmitters = new Set(
+        usersWithSubmissions?.map((s: Submission) => s.user_id) || []
+      ).size;
 
       // Get active users (5+ submissions)
-      const { data: submissionCounts } = await this.supabase
-        .rpc('get_user_submission_counts');
-      const activeUsers = submissionCounts?.filter(u => u.count >= 5).length || 0;
+      const { data: submissionCounts } = await this.supabase.rpc(
+        'get_user_submission_counts'
+      );
+      const activeUsers =
+        submissionCounts?.filter((u: SubmissionCount) => u.count >= 5).length ||
+        0;
 
       // Get pro subscribers
       const { data: proUsers } = await this.supabase
@@ -428,7 +495,7 @@ export class BusinessAnalytics {
       funnel.push({
         stage: 'Active User (5+ submissions)',
         users: activeUsers,
-        conversionRate: activeUsers / totalSignups,
+        conversionRate: activeUsers / uniqueSubmitters,
       });
 
       funnel.push({
@@ -445,26 +512,32 @@ export class BusinessAnalytics {
   }
 
   /**
-   * Track a business event (revenue, conversion, etc.)
+   * Track business events for analytics
    */
   async trackBusinessEvent(
     eventType: string,
     value: number,
     userId?: string,
-    metadata?: any
+    metadata?: Record<string, any>
   ) {
     try {
-      // Record in metrics system
-      metrics.gauge(`business.${eventType}`, value, { userId });
+      metrics.gauge(`business.${eventType}`, value, {
+        userId: userId || 'anonymous',
+      });
 
       // Also track in structured logs for detailed analysis
-      const { structuredLogger } = await import('../observability/structured-logger');
+      const { structuredLogger } = await import(
+        '../observability/structured-logger'
+      );
       structuredLogger.logBusinessMetric(eventType, value, 'count', {
         userId,
         ...metadata,
       });
 
-      logger.info(`Business event tracked: ${eventType} = ${value}`, { userId, metadata });
+      logger.info(`Business event tracked: ${eventType} = ${value}`, {
+        userId,
+        metadata,
+      });
     } catch (error) {
       logger.error('Error tracking business event:', error);
     }
@@ -486,7 +559,8 @@ export class BusinessAnalytics {
 
       // Calculate months since signup
       const monthsSinceSignup = Math.ceil(
-        (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
+        (Date.now() - new Date(user.created_at).getTime()) /
+          (1000 * 60 * 60 * 24 * 30)
       );
 
       // Simple CLV calculation: if PRO user, assume £2.99/month
@@ -532,7 +606,8 @@ export class BusinessAnalytics {
 
       const ltvCacRatio = estimatedCac > 0 ? avgLtv / estimatedCac : 0;
       const monthlyRevenue = 2.99;
-      const paybackPeriod = monthlyRevenue > 0 ? estimatedCac / monthlyRevenue : 0;
+      const paybackPeriod =
+        monthlyRevenue > 0 ? estimatedCac / monthlyRevenue : 0;
 
       return {
         ltv: avgLtv,

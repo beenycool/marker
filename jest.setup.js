@@ -39,7 +39,6 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-
 // Mock React Query
 jest.mock('@tanstack/react-query', () => ({
   useQuery: jest.fn(),

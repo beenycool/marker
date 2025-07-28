@@ -72,7 +72,7 @@ export class KimiProvider extends BaseAIProvider {
       });
 
       const text = response.choices[0]?.message?.content || '';
-      
+
       if (!text) {
         throw new Error('Empty response from AI model');
       }

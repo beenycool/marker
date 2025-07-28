@@ -1,21 +1,15 @@
 // Legacy auth server file - use /auth/index.ts instead
 // This file is maintained for backward compatibility
 
-import { createServerClient as createClient } from './auth/server';
+// import { getEnvVar } from './cloudflare-env';
+import { logger } from './logger';
+import type { User } from '@/types';
+// import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 export async function createServerClient() {
+  // Dynamic import to avoid bundling server code in client
+  const { createServerClient: createClient } = await import('./auth/server');
   return createClient();
-}
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7, // 7 days
-          });
-        },
-        removeItem: (key: string) => {
-          cookieStore.delete(key);
-        },
-      },
-    },
-  });
 }
 
 /**
@@ -24,6 +18,8 @@ export async function createServerClient() {
  */
 export async function getServerUser(): Promise<User | null> {
   try {
+    // Dynamic import to avoid bundling server code in client
+    const { createServerClient } = await import('./auth/server');
     const supabase = await createServerClient();
 
     const {
@@ -75,7 +71,7 @@ export async function getServerUser(): Promise<User | null> {
       return newUser;
     }
   } catch (error) {
-    console.error('Error getting server user:', error);
+    logger.error('Error getting server user:', error);
     return null;
   }
 }

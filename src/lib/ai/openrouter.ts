@@ -76,7 +76,7 @@ export class OpenRouterProvider extends BaseAIProvider {
     return data.choices[0].message.content;
   }
 
-  private parseResponse(content: string, modelUsed: string): MarkingResponse {
+  protected parseResponse(content: string, modelUsed: string): MarkingResponse {
     if (!content) {
       throw new Error('Empty response from AI model');
     }
