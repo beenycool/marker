@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireServerAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const AIFeedbackSchema = z.object({
   submissionId: z.string().uuid(),
@@ -18,15 +19,15 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireServerAuth();
     const body = await request.json();
-    
+
     // Validate request body
     const validatedData = AIFeedbackSchema.parse(body);
-    
+
     // Convert rating to numeric score
     const ratingScore = validatedData.rating === 'helpful' ? 5 : 2;
-    
+
     // Store feedback in database
-    const { data, error } = await db
+    const { data, error } = await (db as any)
       .from('user_feedback')
       .insert({
         user_id: user.id,
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Database error storing AI feedback:', error);
+      logger.error('Database error storing AI feedback', error);
       return NextResponse.json(
         { error: 'Failed to store feedback' },
         { status: 500 }
@@ -65,8 +66,8 @@ export async function POST(request: NextRequest) {
       feedbackId: data.id,
     });
   } catch (error) {
-    console.error('Error processing AI feedback:', error);
-    
+    logger.error('Error processing AI feedback', error);
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid request data', details: error.errors },
@@ -81,19 +82,22 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function updateFeedbackAnalytics(feedbackId: string, sentiment: 'positive' | 'negative') {
+async function updateFeedbackAnalytics(
+  feedbackId: string,
+  sentiment: 'positive' | 'negative'
+) {
   try {
     // This could be used to update AI model performance metrics
     // For now, we'll just log it
-    console.log(`Feedback analytics: ${feedbackId} rated as ${sentiment}`);
-    
+    logger.info(`Feedback analytics: ${feedbackId} rated as ${sentiment}`);
+
     // In the future, this could:
     // 1. Update prompt performance statistics
     // 2. Trigger automatic prompt optimization
     // 3. Alert administrators to quality issues
     // 4. Feed into A/B testing systems
   } catch (error) {
-    console.error('Failed to update feedback analytics:', error);
+    logger.error('Failed to update feedback analytics', error);
   }
 }
 
@@ -102,7 +106,7 @@ export async function GET(request: NextRequest) {
     const user = await requireServerAuth();
     const { searchParams } = new URL(request.url);
     const submissionId = searchParams.get('submissionId');
-    
+
     if (!submissionId) {
       return NextResponse.json(
         { error: 'submissionId is required' },
@@ -111,7 +115,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get existing feedback for this submission by this user
-    const { data, error } = await db
+    const { data, error } = await (db as any)
       .from('user_feedback')
       .select('*')
       .eq('user_id', user.id)
@@ -120,7 +124,7 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (error) {
-      console.error('Database error fetching AI feedback:', error);
+      logger.error('Database error fetching AI feedback', error);
       return NextResponse.json(
         { error: 'Failed to fetch feedback' },
         { status: 500 }
@@ -131,7 +135,7 @@ export async function GET(request: NextRequest) {
       feedback: data?.[0] || null,
     });
   } catch (error) {
-    console.error('Error fetching AI feedback:', error);
+    logger.error('Error fetching AI feedback', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

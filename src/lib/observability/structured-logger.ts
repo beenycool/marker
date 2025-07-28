@@ -19,7 +19,7 @@ export interface StructuredLogEvent {
     bytes_processed?: number;
     tokens_used?: number;
     cost_usd?: number;
-    [key: string]: number;
+    [key: string]: number | undefined;
   };
   tags?: string[];
 }
@@ -86,8 +86,9 @@ export class StructuredLogger {
     duration: number,
     context: any = {}
   ) {
-    const level = statusCode >= 400 ? 'error' : statusCode >= 300 ? 'warn' : 'info';
-    
+    const level =
+      statusCode >= 400 ? 'error' : statusCode >= 300 ? 'warn' : 'info';
+
     this.log({
       level,
       event: 'api_request',
@@ -167,8 +168,13 @@ export class StructuredLogger {
     severity: 'low' | 'medium' | 'high' | 'critical',
     context: any = {}
   ) {
-    const level = severity === 'critical' ? 'error' : severity === 'high' ? 'error' : 'warn';
-    
+    const level =
+      severity === 'critical'
+        ? 'error'
+        : severity === 'high'
+          ? 'error'
+          : 'warn';
+
     this.log({
       level,
       event: 'security_event',
@@ -185,13 +191,9 @@ export class StructuredLogger {
   /**
    * Log performance metrics
    */
-  logPerformanceMetric(
-    operation: string,
-    duration: number,
-    context: any = {}
-  ) {
+  logPerformanceMetric(operation: string, duration: number, context: any = {}) {
     const level = duration > 5000 ? 'warn' : 'info';
-    
+
     this.log({
       level,
       event: 'performance_metric',
@@ -237,11 +239,7 @@ export class StructuredLogger {
   /**
    * Log errors with context
    */
-  logError(
-    error: Error,
-    context: any = {},
-    tags: string[] = []
-  ) {
+  logError(error: Error, context: any = {}, tags: string[] = []) {
     this.log({
       level: 'error',
       event: 'error',
@@ -304,9 +302,8 @@ export class StructuredLogger {
 
     try {
       if (this.supabase) {
-        await this.supabase
-          .from('structured_logs')
-          .insert(logsToFlush.map(log => ({
+        await this.supabase.from('structured_logs').insert(
+          logsToFlush.map(log => ({
             timestamp: log.timestamp,
             level: log.level,
             event: log.event,
@@ -314,15 +311,17 @@ export class StructuredLogger {
             context: log.context,
             metrics: log.metrics || {},
             tags: log.tags || [],
-          })));
+          }))
+        );
       }
     } catch (error) {
       // Don't use structured logger here to avoid infinite loop
+      // eslint-disable-next-line no-console
       console.error('Failed to flush structured logs:', error);
-      
+
       // Put logs back in buffer to retry later
       this.buffer.unshift(...logsToFlush);
-      
+
       // Limit buffer size to prevent memory issues
       if (this.buffer.length > 1000) {
         this.buffer = this.buffer.slice(0, 1000);

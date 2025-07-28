@@ -2,22 +2,25 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  HomeIcon, 
-  UsersIcon, 
-  DocumentTextIcon, 
-  ChartBarIcon, 
+import {
+  HomeIcon,
+  UsersIcon,
+  DocumentTextIcon,
   CogIcon,
   BeakerIcon,
   ExclamationTriangleIcon,
   ArrowLeftIcon,
   CurrencyDollarIcon,
-  ChartPieIcon
+  ChartPieIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: HomeIcon },
-  { name: 'Business Intelligence', href: '/admin/business', icon: CurrencyDollarIcon },
+  {
+    name: 'Business Intelligence',
+    href: '/admin/business',
+    icon: CurrencyDollarIcon,
+  },
   { name: 'Prompts', href: '/admin/prompts', icon: DocumentTextIcon },
   { name: 'Users', href: '/admin/users', icon: UsersIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: ChartPieIcon },
@@ -41,9 +44,9 @@ export function AdminNav() {
               <ArrowLeftIcon className="h-4 w-4" />
               <span className="text-sm">Back to App</span>
             </Link>
-            
+
             <div className="flex space-x-8">
-              {navigation.map((item) => {
+              {navigation.map(item => {
                 const isActive = pathname === item.href;
                 return (
                   <Link
@@ -62,7 +65,7 @@ export function AdminNav() {
               })}
             </div>
           </div>
-          
+
           <div className="flex items-center">
             <span className="text-sm text-gray-600 bg-red-100 text-red-800 px-2 py-1 rounded-full">
               Admin Mode

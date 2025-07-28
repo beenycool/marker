@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { POST, GET } from '../feedback/route';
-import { 
-  createMockUser, 
-  createMockSupabaseClient, 
+import {
+  createMockUser,
+  createMockSupabaseClient,
   createMockRequest,
   expectAPIResponse,
-  mockConsole
+  mockConsole,
 } from '@/lib/__tests__/test-utils';
 
 // Mock dependencies with proper typing
@@ -34,7 +34,9 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { rateLimit } from '@/lib/rate-limit';
 
 const mockGetSupabase = getSupabase as jest.MockedFunction<typeof getSupabase>;
-const mockGetCurrentUser = getCurrentUser as jest.MockedFunction<typeof getCurrentUser>;
+const mockGetCurrentUser = getCurrentUser as jest.MockedFunction<
+  typeof getCurrentUser
+>;
 const mockRateLimit = rateLimit as jest.MockedFunction<typeof rateLimit>;
 
 describe('/api/feedback', () => {
@@ -45,10 +47,10 @@ describe('/api/feedback', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockSupabase = createMockSupabaseClient();
     mockUser = createMockUser();
-    
+
     mockGetSupabase.mockResolvedValue(mockSupabase as any);
     mockGetCurrentUser.mockResolvedValue(mockUser);
     mockRateLimit.mockResolvedValue(null);
@@ -62,13 +64,13 @@ describe('/api/feedback', () => {
         comment: 'Great feedback!',
       };
 
-      const mockSubmission = { 
-        id: 'sub_123', 
+      const mockSubmission = {
+        id: 'sub_123',
         user_id: mockUser.id,
         question: 'Test question',
-        answer: 'Test answer'
+        answer: 'Test answer',
       };
-      
+
       const mockFeedbackResult = {
         id: 'feedback_123',
         submission_id: 'sub_123',
@@ -88,14 +90,14 @@ describe('/api/feedback', () => {
         };
 
         if (table === 'submissions') {
-          baseQuery.single.mockResolvedValue({ 
-            data: mockSubmission, 
-            error: null 
+          baseQuery.single.mockResolvedValue({
+            data: mockSubmission,
+            error: null,
           });
         } else if (table === 'feedback') {
-          baseQuery.single.mockResolvedValue({ 
-            data: mockFeedbackResult, 
-            error: null 
+          baseQuery.single.mockResolvedValue({
+            data: mockFeedbackResult,
+            error: null,
           });
         }
 
@@ -108,7 +110,7 @@ describe('/api/feedback', () => {
       });
 
       const response = await POST(request);
-      
+
       expect(response.status).toBe(201);
       expect(mockSupabase.from).toHaveBeenCalledWith('submissions');
       expect(mockSupabase.from).toHaveBeenCalledWith('feedback');
@@ -123,7 +125,7 @@ describe('/api/feedback', () => {
       });
 
       const response = await POST(request);
-      
+
       expect(response.status).toBe(401);
     });
 
@@ -138,9 +140,9 @@ describe('/api/feedback', () => {
       mockSupabase.from.mockImplementation((table: string) => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ 
-          data: null, 
-          error: { message: 'No rows returned' } 
+        single: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'No rows returned' },
         }),
       }));
 
@@ -150,7 +152,7 @@ describe('/api/feedback', () => {
       });
 
       const response = await POST(request);
-      
+
       expect(response.status).toBe(400);
     });
 
@@ -161,11 +163,11 @@ describe('/api/feedback', () => {
         comment: 'Test comment',
       };
 
-      const otherUserSubmission = { 
-        id: 'sub_123', 
+      const otherUserSubmission = {
+        id: 'sub_123',
         user_id: 'other-user-id', // Different from mockUser.id
         question: 'Test question',
-        answer: 'Test answer'
+        answer: 'Test answer',
       };
 
       mockSupabase.from.mockImplementation((table: string) => {
@@ -173,9 +175,9 @@ describe('/api/feedback', () => {
           return {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({ 
-              data: otherUserSubmission, 
-              error: null 
+            single: jest.fn().mockResolvedValue({
+              data: otherUserSubmission,
+              error: null,
             }),
           };
         }
@@ -193,7 +195,7 @@ describe('/api/feedback', () => {
       });
 
       const response = await POST(request);
-      
+
       expect(response.status).toBe(403);
     });
 
@@ -208,9 +210,9 @@ describe('/api/feedback', () => {
       mockSupabase.from.mockImplementation(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ 
-          data: null, 
-          error: { message: 'Database connection failed' } 
+        single: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'Database connection failed' },
         }),
       }));
 
@@ -220,7 +222,7 @@ describe('/api/feedback', () => {
       });
 
       const response = await POST(request);
-      
+
       expect(response.status).toBe(500);
     });
   });
@@ -248,15 +250,15 @@ describe('/api/feedback', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({ 
-          data: mockFeedbackList, 
-          error: null 
+        limit: jest.fn().mockResolvedValue({
+          data: mockFeedbackList,
+          error: null,
         }),
       }));
 
       const request = createMockRequest({ method: 'GET' });
       const response = await GET(request);
-      
+
       expect(response.status).toBe(200);
       expect(mockSupabase.from).toHaveBeenCalledWith('feedback');
     });
@@ -266,7 +268,7 @@ describe('/api/feedback', () => {
 
       const request = createMockRequest({ method: 'GET' });
       const response = await GET(request);
-      
+
       expect(response.status).toBe(401);
     });
   });

@@ -8,9 +8,9 @@ services:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpass
     ports:
-      - "5433:5432"
+      - '5433:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d aimarker_test"]
+      test: ['CMD-SHELL', 'pg_isready -U testuser -d aimarker_test']
       interval: 10s
       timeout: 5s
       retries: 5

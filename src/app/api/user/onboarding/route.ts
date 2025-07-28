@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Track onboarding completion
-    trackOnboardingCompleted(user.id);
+    trackOnboardingCompleted();
 
     return NextResponse.json({
       success: true,

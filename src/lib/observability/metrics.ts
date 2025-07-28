@@ -102,41 +102,65 @@ export class MetricsCollector {
   /**
    * Record custom application metrics
    */
-  
+
   // User metrics
-  recordUserSignup(userId: string, tier: string) {
+  recordUserSignup(_userId: string, tier: string) {
     this.counter('user.signup', 1, { tier });
     this.gauge('user.total', 1, { tier });
   }
 
-  recordUserSubscription(userId: string, tier: string, revenue: number) {
+  recordUserSubscription(_userId: string, tier: string, revenue: number) {
     this.counter('subscription.created', 1, { tier });
     this.gauge('revenue.monthly', revenue, { tier });
   }
 
-  recordUserActivity(userId: string, action: string) {
+  recordUserActivity(_userId: string, action: string) {
     this.counter('user.activity', 1, { action });
   }
 
   // API metrics
-  recordApiRequest(method: string, path: string, statusCode: number, duration: number) {
-    this.counter('api.requests', 1, { method, path, status: statusCode.toString() });
+  recordApiRequest(
+    method: string,
+    path: string,
+    statusCode: number,
+    duration: number
+  ) {
+    this.counter('api.requests', 1, {
+      method,
+      path,
+      status: statusCode.toString(),
+    });
     this.timing('api.duration', duration, { method, path });
-    
+
     if (statusCode >= 400) {
-      this.counter('api.errors', 1, { method, path, status: statusCode.toString() });
+      this.counter('api.errors', 1, {
+        method,
+        path,
+        status: statusCode.toString(),
+      });
     }
   }
 
   // AI Provider metrics
-  recordAiProviderCall(provider: string, model: string, success: boolean, duration: number, cost?: number, tokens?: number) {
-    this.counter('ai.requests', 1, { provider, model, success: success.toString() });
+  recordAiProviderCall(
+    provider: string,
+    model: string,
+    success: boolean,
+    duration: number,
+    cost?: number,
+    tokens?: number
+  ) {
+    this.counter('ai.requests', 1, {
+      provider,
+      model,
+      success: success.toString(),
+    });
     this.timing('ai.duration', duration, { provider, model });
-    
+
     if (cost !== undefined) {
       this.gauge('ai.cost', cost, { provider, model });
     }
-    
+
     if (tokens !== undefined) {
       this.gauge('ai.tokens', tokens, { provider, model });
     }
@@ -147,7 +171,12 @@ export class MetricsCollector {
   }
 
   // Business metrics
-  recordSubmissionProcessed(subject: string, examBoard: string, score: number, grade: string) {
+  recordSubmissionProcessed(
+    subject: string,
+    examBoard: string,
+    score: number,
+    grade: string
+  ) {
     this.counter('submissions.processed', 1, { subject, examBoard, grade });
     this.histogram('submissions.score', score, { subject, examBoard });
   }
@@ -157,10 +186,19 @@ export class MetricsCollector {
   }
 
   // Performance metrics
-  recordDatabaseQuery(table: string, operation: string, duration: number, success: boolean) {
-    this.counter('database.queries', 1, { table, operation, success: success.toString() });
+  recordDatabaseQuery(
+    table: string,
+    operation: string,
+    duration: number,
+    success: boolean
+  ) {
+    this.counter('database.queries', 1, {
+      table,
+      operation,
+      success: success.toString(),
+    });
     this.timing('database.duration', duration, { table, operation });
-    
+
     if (!success) {
       this.counter('database.errors', 1, { table, operation });
     }
@@ -183,7 +221,11 @@ export class MetricsCollector {
   /**
    * Time a function execution and record the metric
    */
-  async time<T>(name: string, fn: () => Promise<T>, tags?: Record<string, string>): Promise<T> {
+  async time<T>(
+    name: string,
+    fn: () => Promise<T>,
+    tags?: Record<string, string>
+  ): Promise<T> {
     const start = Date.now();
     try {
       const result = await fn();
@@ -226,10 +268,12 @@ export class MetricsCollector {
 
       return {
         name,
-        points: (data || []).map(point => ({
-          timestamp: point.timestamp,
-          value: point.metric_value,
-        })),
+        points: (data || []).map(
+          (point: { timestamp: string; metric_value: number }) => ({
+            timestamp: point.timestamp,
+            value: point.metric_value,
+          })
+        ),
         tags,
       };
     } catch (error) {
@@ -290,9 +334,8 @@ export class MetricsCollector {
 
     try {
       if (this.supabase) {
-        await this.supabase
-          .from('system_metrics')
-          .insert(metricsToFlush.map(metric => ({
+        await this.supabase.from('system_metrics').insert(
+          metricsToFlush.map(metric => ({
             metric_name: metric.name,
             metric_value: metric.value,
             timestamp: metric.timestamp,
@@ -300,14 +343,15 @@ export class MetricsCollector {
               tags: metric.tags || {},
               unit: metric.unit,
             },
-          })));
+          }))
+        );
       }
     } catch (error) {
       logger.error('Failed to flush metrics:', error);
-      
+
       // Put metrics back in buffer to retry later
       this.buffer.unshift(...metricsToFlush);
-      
+
       // Limit buffer size to prevent memory issues
       if (this.buffer.length > 1000) {
         this.buffer = this.buffer.slice(0, 1000);

@@ -28,11 +28,17 @@ export const env = {
   },
 
   get STRIPE_PRO_MONTHLY_PRICE_ID() {
-    return getEnvVar('STRIPE_PRO_MONTHLY_PRICE_ID') || 'price_1RksqiDb7SYU5gvXjID3h3H4';
+    return (
+      getEnvVar('STRIPE_PRO_MONTHLY_PRICE_ID') ||
+      'price_1RksqiDb7SYU5gvXjID3h3H4'
+    );
   },
 
   get STRIPE_PRO_YEARLY_PRICE_ID() {
-    return getEnvVar('STRIPE_PRO_YEARLY_PRICE_ID') || 'price_1RksqiDb7SYU5gvXjID3h3H4';
+    return (
+      getEnvVar('STRIPE_PRO_YEARLY_PRICE_ID') ||
+      'price_1RksqiDb7SYU5gvXjID3h3H4'
+    );
   },
 
   get POSTHOG_KEY() {
@@ -101,10 +107,7 @@ export const clientEnv = {
 
 // Async version for server-side usage
 export const getEnv = async () => {
-  const [
-    freeTierLimit,
-    proTierLimit,
-  ] = await Promise.all([
+  const [freeTierLimit, proTierLimit] = await Promise.all([
     getEnvVar('FREE_TIER_DAILY_LIMIT').then(v => parseInt(v || '20')),
     getEnvVar('PRO_TIER_DAILY_LIMIT').then(v => parseInt(v || '200')),
   ]);

@@ -52,7 +52,7 @@ export async function getDashboardData(
     const { data, error } = await client.rpc('get_user_dashboard', {
       user_id: userId,
       page_num: page,
-      page_size: limit
+      page_size: limit,
     });
 
     if (error) {
@@ -68,26 +68,26 @@ export async function getDashboardData(
           averageScore: 0,
           subjectBreakdown: {},
           progressOverTime: [],
-          gradeDistribution: {}
+          gradeDistribution: {},
         },
         usage: {
           used: usageCheck.usedToday,
           limit: usageCheck.limit,
           remaining: usageCheck.limit - usageCheck.usedToday,
           canUse: usageCheck.canUse,
-          percentage: (usageCheck.usedToday / usageCheck.limit) * 100
+          percentage: (usageCheck.usedToday / usageCheck.limit) * 100,
         },
         pagination: {
           page,
           limit,
           total: 0,
-          totalPages: 0
-        }
+          totalPages: 0,
+        },
       };
     }
 
     const result = data[0];
-    
+
     return {
       recentSubmissions: result.recent_submissions || [],
       analytics: {
@@ -95,21 +95,21 @@ export async function getDashboardData(
         averageScore: result.average_score || 0,
         subjectBreakdown: result.subject_breakdown || {},
         progressOverTime: result.progress_over_time || [],
-        gradeDistribution: result.grade_distribution || {}
+        gradeDistribution: result.grade_distribution || {},
       },
       usage: {
         used: usageCheck.usedToday,
         limit: usageCheck.limit,
         remaining: usageCheck.limit - usageCheck.usedToday,
         canUse: usageCheck.canUse,
-        percentage: (usageCheck.usedToday / usageCheck.limit) * 100
+        percentage: (usageCheck.usedToday / usageCheck.limit) * 100,
       },
       pagination: {
         page,
         limit,
         total: result.total_submissions || 0,
-        totalPages: Math.ceil((result.total_submissions || 0) / limit)
-      }
+        totalPages: Math.ceil((result.total_submissions || 0) / limit),
+      },
     };
   } catch (error) {
     logger.error('Error in getDashboardData:', error);

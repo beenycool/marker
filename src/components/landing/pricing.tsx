@@ -68,6 +68,7 @@ export function Pricing() {
         const isActive = await isSummerPromotionActive();
         setIsSummerPromotion(isActive);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error checking summer promotion:', error);
         setIsSummerPromotion(false);
       }

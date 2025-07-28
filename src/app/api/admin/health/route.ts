@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { getSupabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
@@ -15,10 +15,10 @@ async function checkDatabase(): Promise<HealthCheck> {
   const start = Date.now();
   try {
     const supabase = await getSupabase();
-    const { data, error } = await supabase.from('submissions').select('id').limit(1);
-    
+    const { error } = await supabase.from('submissions').select('id').limit(1);
+
     const responseTime = Date.now() - start;
-    
+
     if (error) {
       return {
         name: 'Database',
@@ -28,11 +28,14 @@ async function checkDatabase(): Promise<HealthCheck> {
         responseTime,
       };
     }
-    
+
     return {
       name: 'Database',
       status: responseTime > 1000 ? 'warning' : 'healthy',
-      message: responseTime > 1000 ? 'Database responding slowly' : 'Database connection healthy',
+      message:
+        responseTime > 1000
+          ? 'Database responding slowly'
+          : 'Database connection healthy',
       lastChecked: new Date().toISOString(),
       responseTime,
     };
@@ -53,15 +56,17 @@ async function checkAIProviders(): Promise<HealthCheck> {
     // For now, we'll check recent feedback for errors
     const supabase = await getSupabase();
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    
+
     const { data: recentFeedback } = await supabase
       .from('feedback')
       .select('error_message')
       .gte('created_at', fiveMinutesAgo.toISOString());
-    
-    const errorCount = recentFeedback?.filter(f => f.error_message).length || 0;
+
+    const errorCount =
+      recentFeedback?.filter((f: { error_message: any }) => f.error_message)
+        .length || 0;
     const totalCount = recentFeedback?.length || 0;
-    
+
     if (totalCount === 0) {
       return {
         name: 'AI Providers',
@@ -70,15 +75,16 @@ async function checkAIProviders(): Promise<HealthCheck> {
         lastChecked: new Date().toISOString(),
       };
     }
-    
+
     const errorRate = errorCount / totalCount;
-    
+
     return {
       name: 'AI Providers',
       status: errorRate > 0.1 ? 'warning' : 'healthy',
-      message: errorRate > 0.1 
-        ? `${(errorRate * 100).toFixed(1)}% error rate in last 5 minutes`
-        : 'AI providers responding normally',
+      message:
+        errorRate > 0.1
+          ? `${(errorRate * 100).toFixed(1)}% error rate in last 5 minutes`
+          : 'AI providers responding normally',
       lastChecked: new Date().toISOString(),
     };
   } catch (error) {
@@ -97,14 +103,18 @@ async function checkRateLimit(): Promise<HealthCheck> {
     const supabase = await getSupabase();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const { data: todayUsage } = await supabase
       .from('usage_tracking')
       .select('count')
       .gte('date', today.toISOString().split('T')[0]);
-    
-    const totalUsage = todayUsage?.reduce((sum, u) => sum + u.count, 0) || 0;
-    
+
+    const totalUsage =
+      todayUsage?.reduce(
+        (sum: number, u: { count: number }) => sum + u.count,
+        0
+      ) || 0;
+
     return {
       name: 'Rate Limiting',
       status: 'healthy',
@@ -141,10 +151,10 @@ async function checkStorage(): Promise<HealthCheck> {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await requireAdmin();
-    
+
     // Run all health checks in parallel
     const [database, aiProviders, rateLimit, storage] = await Promise.all([
       checkDatabase(),
@@ -152,15 +162,19 @@ export async function GET(request: NextRequest) {
       checkRateLimit(),
       checkStorage(),
     ]);
-    
+
     const checks = [database, aiProviders, rateLimit, storage];
-    
+
     // Calculate overall system status
     const hasError = checks.some(check => check.status === 'error');
     const hasWarning = checks.some(check => check.status === 'warning');
-    
-    const overallStatus = hasError ? 'error' : hasWarning ? 'warning' : 'healthy';
-    
+
+    const overallStatus = hasError
+      ? 'error'
+      : hasWarning
+        ? 'warning'
+        : 'healthy';
+
     return NextResponse.json({
       status: overallStatus,
       checks,

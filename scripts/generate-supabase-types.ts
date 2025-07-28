@@ -1,13 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
-import * as path from 'path';
 
 // Get Supabase credentials from environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.');
+  console.error(
+    'Missing Supabase credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+  );
   process.exit(1);
 }
 
@@ -18,8 +19,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 async function generateTypes() {
   try {
     // Fetch table information from Supabase
-    const { data: tables, error: tablesError } = await supabase
-      .rpc('get_public_tables');
+    const { data: tables, error: tablesError } =
+      await supabase.rpc('get_public_tables');
 
     if (tablesError) {
       console.error('Error fetching tables:', tablesError);
@@ -31,43 +32,48 @@ async function generateTypes() {
     typesContent += 'export type Database = {\n  public: {\n    Tables: {\n';
 
     for (const table of tables) {
-      const { data: columns, error: columnsError } = await supabase
-        .rpc('get_table_columns', { table_name: table.table_name });
+      const { data: columns, error: columnsError } = await supabase.rpc(
+        'get_table_columns',
+        { table_name: table.table_name }
+      );
 
       if (columnsError) {
-        console.error(`Error fetching columns for ${table.table_name}:`, columnsError);
+        console.error(
+          `Error fetching columns for ${table.table_name}:`,
+          columnsError
+        );
         continue;
       }
 
       typesContent += `      ${table.table_name}: {\n`;
       typesContent += '        Row: {\n';
-      
+
       for (const column of columns) {
         const nullable = column.is_nullable === 'YES';
         const type = mapDataType(column.data_type, nullable);
         typesContent += `          ${column.column_name}: ${type};\n`;
       }
-      
+
       typesContent += '        };\n';
       typesContent += '        Insert: {\n';
-      
+
       for (const column of columns) {
         const nullable = column.is_nullable === 'YES';
         const type = mapDataType(column.data_type, nullable);
         // Make all fields optional for Insert type
         typesContent += `          ${column.column_name}?: ${type};\n`;
       }
-      
+
       typesContent += '        };\n';
       typesContent += '        Update: {\n';
-      
+
       for (const column of columns) {
         const nullable = column.is_nullable === 'YES';
         const type = mapDataType(column.data_type, nullable);
         // Make all fields optional for Update type
         typesContent += `          ${column.column_name}?: ${type};\n`;
       }
-      
+
       typesContent += '        };\n';
       typesContent += '      };\n';
     }
@@ -86,7 +92,7 @@ async function generateTypes() {
 // Map PostgreSQL data types to TypeScript types
 function mapDataType(pgType: string, nullable: boolean): string {
   let tsType: string;
-  
+
   switch (pgType) {
     case 'integer':
     case 'bigint':
@@ -115,7 +121,7 @@ function mapDataType(pgType: string, nullable: boolean): string {
       tsType = 'any';
       console.warn(`Unknown PostgreSQL type: ${pgType}`);
   }
-  
+
   return nullable ? `${tsType} | null` : tsType;
 }
 

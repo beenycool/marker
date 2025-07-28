@@ -18,14 +18,17 @@ export class AIResponseParser {
    * @returns Validated MarkingResponse
    * @throws Error if parsing fails or validation fails
    */
-  static parseResponse(rawResponse: string, modelUsed: string): MarkingResponse {
+  static parseResponse(
+    rawResponse: string,
+    modelUsed: string
+  ): MarkingResponse {
     try {
       // Attempt to parse JSON directly
       const jsonResponse = JSON.parse(rawResponse);
-      
+
       // Validate the response structure
       const validatedResponse = MarkingResponseSchema.parse(jsonResponse);
-      
+
       return {
         score: validatedResponse.score,
         grade: this.generateGradeFromScore(validatedResponse.score),
@@ -36,15 +39,23 @@ export class AIResponseParser {
       };
     } catch (error) {
       if (error instanceof SyntaxError) {
-        throw new Error(`Invalid JSON response from AI model: ${error.message}. Raw response: ${rawResponse.substring(0, 200)}...`);
+        throw new Error(
+          `Invalid JSON response from AI model: ${error.message}. Raw response: ${rawResponse.substring(0, 200)}...`
+        );
       }
-      
+
       if (error instanceof z.ZodError) {
-        const missingFields = error.errors.map(e => e.path.join('.')).join(', ');
-        throw new Error(`AI response validation failed. Missing or invalid fields: ${missingFields}. Raw response: ${rawResponse.substring(0, 200)}...`);
+        const missingFields = error.errors
+          .map(e => e.path.join('.'))
+          .join(', ');
+        throw new Error(
+          `AI response validation failed. Missing or invalid fields: ${missingFields}. Raw response: ${rawResponse.substring(0, 200)}...`
+        );
       }
-      
-      throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      throw new Error(
+        `Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -54,7 +65,10 @@ export class AIResponseParser {
    * @param totalMarks - Total marks available (default 100)
    * @returns GCSE grade string
    */
-  private static generateGradeFromScore(score: number, totalMarks: number = 100): string {
+  private static generateGradeFromScore(
+    score: number,
+    totalMarks: number = 100
+  ): string {
     const percentage = (score / totalMarks) * 100;
 
     if (percentage >= 97) return '9';
@@ -80,7 +94,9 @@ export class AIResponseParser {
       return { valid: true, errors: [] };
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors = error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+        const errors = error.errors.map(
+          e => `${e.path.join('.')}: ${e.message}`
+        );
         return { valid: false, errors };
       }
       return { valid: false, errors: ['Unknown validation error'] };

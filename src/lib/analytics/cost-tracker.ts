@@ -32,23 +32,23 @@ export interface CostProjection {
 export class CostTracker {
   private static instance: CostTracker;
   private supabase: any;
-  
+
   // Provider pricing (cost per 1K tokens)
   private providerPricing: Record<string, Record<string, number>> = {
-    'openrouter': {
+    openrouter: {
       'gpt-4': 0.03,
       'gpt-3.5-turbo': 0.002,
       'claude-3-sonnet': 0.015,
       'claude-3-haiku': 0.00025,
     },
-    'deepseek': {
+    deepseek: {
       'deepseek-coder': 0.0014,
       'deepseek-chat': 0.0014,
     },
-    'kimi': {
+    kimi: {
       'moonshot-v1': 0.012,
     },
-    'gemini': {
+    gemini: {
       'gemini-pro': 0.000125, // Free tier, very low cost
       'gemini-pro-vision': 0.00025,
     },
@@ -78,8 +78,8 @@ export class CostTracker {
       let finalCost = entry.cost_usd;
       if (!finalCost && entry.tokens_used && entry.model_name) {
         finalCost = this.calculateCost(
-          entry.provider_name, 
-          entry.model_name, 
+          entry.provider_name,
+          entry.model_name,
           entry.tokens_used
         );
       }
@@ -92,9 +92,7 @@ export class CostTracker {
 
       // Store in database
       if (this.supabase) {
-        await this.supabase
-          .from('cost_tracking')
-          .insert(costEntry);
+        await this.supabase.from('cost_tracking').insert(costEntry);
       }
 
       // Record in metrics system
@@ -104,12 +102,15 @@ export class CostTracker {
         request_type: entry.request_type,
       });
 
-      logger.info(`Cost tracked: ${entry.provider_name} - $${finalCost.toFixed(4)}`, {
-        provider: entry.provider_name,
-        model: entry.model_name,
-        tokens: entry.tokens_used,
-        cost: finalCost,
-      });
+      logger.info(
+        `Cost tracked: ${entry.provider_name} - $${finalCost.toFixed(4)}`,
+        {
+          provider: entry.provider_name,
+          model: entry.model_name,
+          tokens: entry.tokens_used,
+          cost: finalCost,
+        }
+      );
     } catch (error) {
       logger.error('Error tracking cost:', error);
     }
@@ -155,7 +156,7 @@ export class CostTracker {
 
       // Group by provider
       const providerGroups: Record<string, CostEntry[]> = {};
-      costs?.forEach(cost => {
+      costs?.forEach((cost: CostEntry) => {
         const provider = cost.provider_name;
         if (!providerGroups[provider]) {
           providerGroups[provider] = [];
@@ -168,7 +169,8 @@ export class CostTracker {
       for (const [provider, providerCosts] of Object.entries(providerGroups)) {
         const totalCost = providerCosts.reduce((sum, c) => sum + c.cost_usd, 0);
         const totalRequests = providerCosts.length;
-        const averageCostPerRequest = totalRequests > 0 ? totalCost / totalRequests : 0;
+        const averageCostPerRequest =
+          totalRequests > 0 ? totalCost / totalRequests : 0;
 
         // Group by model
         const costByModel: Record<string, number> = {};
@@ -206,7 +208,9 @@ export class CostTracker {
 
       if (error) throw error;
 
-      return costs?.reduce((sum, c) => sum + c.cost_usd, 0) || 0;
+      return (
+        costs?.reduce((sum: number, c: CostEntry) => sum + c.cost_usd, 0) || 0
+      );
     } catch (error) {
       logger.error('Error getting total costs:', error);
       throw error;
@@ -233,8 +237,8 @@ export class CostTracker {
 
       // Group by time period
       const trends: Record<string, { cost: number; requests: number }> = {};
-      costs?.forEach(cost => {
-        const date = new Date(cost.created_at);
+      costs?.forEach((cost: CostEntry) => {
+        const date = new Date(cost.created_at || Date.now());
         let period: string;
 
         switch (granularity) {
@@ -276,10 +280,12 @@ export class CostTracker {
   async getCostProjection(daysToAnalyze: number = 7): Promise<CostProjection> {
     try {
       const endDate = new Date();
-      const startDate = new Date(endDate.getTime() - daysToAnalyze * 24 * 60 * 60 * 1000);
+      const startDate = new Date(
+        endDate.getTime() - daysToAnalyze * 24 * 60 * 60 * 1000
+      );
 
       const trends = await this.getCostTrends(startDate, endDate, 'day');
-      
+
       if (trends.length === 0) {
         return {
           dailyProjection: 0,
@@ -290,19 +296,20 @@ export class CostTracker {
       }
 
       // Calculate average daily cost
-      const avgDailyCost = trends.reduce((sum, t) => sum + t.cost, 0) / trends.length;
-      
+      const avgDailyCost =
+        trends.reduce((sum, t) => sum + t.cost, 0) / trends.length;
+
       // Calculate variance for confidence interval
-      const costVariance = trends.reduce((sum, t) => 
-        sum + Math.pow(t.cost - avgDailyCost, 2), 0
-      ) / trends.length;
+      const costVariance =
+        trends.reduce((sum, t) => sum + Math.pow(t.cost - avgDailyCost, 2), 0) /
+        trends.length;
       const standardDeviation = Math.sqrt(costVariance);
-      
+
       // Project future costs
       const dailyProjection = avgDailyCost;
       const monthlyProjection = avgDailyCost * 30;
       const yearlyProjection = avgDailyCost * 365;
-      
+
       // 95% confidence interval (±2 standard deviations)
       const confidenceInterval = 2 * standardDeviation;
 
@@ -330,7 +337,9 @@ export class CostTracker {
     startDate: Date,
     endDate: Date,
     limit: number = 10
-  ): Promise<Array<{ userId: string; totalCost: number; requestCount: number }>> {
+  ): Promise<
+    Array<{ userId: string; totalCost: number; requestCount: number }>
+  > {
     try {
       const { data: costs, error } = await this.supabase
         .from('cost_tracking')
@@ -342,14 +351,19 @@ export class CostTracker {
       if (error) throw error;
 
       // Group by user
-      const userCosts: Record<string, { totalCost: number; requestCount: number }> = {};
-      costs?.forEach(cost => {
+      const userCosts: Record<
+        string,
+        { totalCost: number; requestCount: number }
+      > = {};
+      costs?.forEach((cost: CostEntry) => {
         const userId = cost.user_id;
-        if (!userCosts[userId]) {
+        if (userId && !userCosts[userId]) {
           userCosts[userId] = { totalCost: 0, requestCount: 0 };
         }
-        userCosts[userId].totalCost += cost.cost_usd;
-        userCosts[userId].requestCount += 1;
+        if (userId) {
+          userCosts[userId].totalCost += cost.cost_usd;
+          userCosts[userId].requestCount += 1;
+        }
       });
 
       return Object.entries(userCosts)
@@ -400,8 +414,8 @@ export class CostTracker {
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString());
 
-      const totalRequests = feedback?.length || 1;
-      const successfulRequests = feedback?.filter(f => !f.error_message).length || 1;
+      const successfulRequests =
+        feedback?.filter((f: any) => !f.error_message).length || 1;
 
       // Find most/least efficient providers
       const providerEfficiency = costData.map(p => ({
@@ -416,7 +430,8 @@ export class CostTracker {
         costPerSubmission: totalCost / totalSubmissions,
         costPerSuccessfulRequest: totalCost / successfulRequests,
         mostEfficientProvider: providerEfficiency[0]?.provider || 'none',
-        leastEfficientProvider: providerEfficiency[providerEfficiency.length - 1]?.provider || 'none',
+        leastEfficientProvider:
+          providerEfficiency[providerEfficiency.length - 1]?.provider || 'none',
       };
     } catch (error) {
       logger.error('Error calculating cost efficiency metrics:', error);
@@ -429,13 +444,12 @@ export class CostTracker {
    */
   async setBudgetAlert(
     threshold: number,
-    period: 'daily' | 'monthly',
-    alertChannels: string[]
+    period: 'daily' | 'monthly'
   ): Promise<void> {
     try {
       // This would integrate with the alerting system
       const { alerting } = await import('../observability/alerting');
-      
+
       const metricName = period === 'daily' ? 'cost.daily' : 'cost.monthly';
       const windowMinutes = period === 'daily' ? 1440 : 43200; // 24 hours or 30 days
 
@@ -460,12 +474,14 @@ export class CostTracker {
   /**
    * Optimize costs by suggesting provider/model changes
    */
-  async getCostOptimizationSuggestions(): Promise<Array<{
-    type: string;
-    description: string;
-    potentialSavings: number;
-    priority: 'high' | 'medium' | 'low';
-  }>> {
+  async getCostOptimizationSuggestions(): Promise<
+    Array<{
+      type: string;
+      description: string;
+      potentialSavings: number;
+      priority: 'high' | 'medium' | 'low';
+    }>
+  > {
     try {
       const suggestions: Array<{
         type: string;
@@ -477,13 +493,14 @@ export class CostTracker {
       // Analyze last 30 days
       const endDate = new Date();
       const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-      
+
       const breakdown = await this.getCostBreakdown(startDate, endDate);
       const totalCost = breakdown.reduce((sum, b) => sum + b.totalCost, 0);
 
       // Check for expensive providers
       breakdown.forEach(provider => {
-        if (provider.averageCostPerRequest > 0.05) { // $0.05 per request
+        if (provider.averageCostPerRequest > 0.05) {
+          // $0.05 per request
           const potentialSavings = provider.totalCost * 0.3; // Assume 30% savings
           suggestions.push({
             type: 'provider_optimization',
@@ -497,8 +514,11 @@ export class CostTracker {
       // Check for underutilized expensive models
       for (const provider of breakdown) {
         const expensiveModels = Object.entries(provider.costByModel)
-          .filter(([model, cost]) => cost > provider.totalCost * 0.3)
-          .filter(([model]) => model.includes('gpt-4') || model.includes('claude-3-opus'));
+          .filter(([, cost]) => cost > provider.totalCost * 0.3)
+          .filter(
+            ([model]) =>
+              model.includes('gpt-4') || model.includes('claude-3-opus')
+          );
 
         expensiveModels.forEach(([model, cost]) => {
           suggestions.push({
@@ -511,17 +531,23 @@ export class CostTracker {
       }
 
       // Check for caching opportunities
-      const efficiency = await this.getCostEfficiencyMetrics(startDate, endDate);
+      const efficiency = await this.getCostEfficiencyMetrics(
+        startDate,
+        endDate
+      );
       if (efficiency.costPerSuccessfulRequest > 0.02) {
         suggestions.push({
           type: 'caching_optimization',
-          description: 'Implement more aggressive caching to reduce duplicate API calls',
+          description:
+            'Implement more aggressive caching to reduce duplicate API calls',
           potentialSavings: totalCost * 0.15,
           priority: 'medium',
         });
       }
 
-      return suggestions.sort((a, b) => b.potentialSavings - a.potentialSavings);
+      return suggestions.sort(
+        (a, b) => b.potentialSavings - a.potentialSavings
+      );
     } catch (error) {
       logger.error('Error generating cost optimization suggestions:', error);
       return [];

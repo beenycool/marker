@@ -46,7 +46,9 @@ export function useDashboard(page: number = 1, limit: number = 10) {
       );
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to fetch dashboard data: ${response.status} ${errorText}`);
+        throw new Error(
+          `Failed to fetch dashboard data: ${response.status} ${errorText}`
+        );
       }
       return response.json();
     },
@@ -57,6 +59,6 @@ export function useDashboard(page: number = 1, limit: number = 10) {
       if (error.message.includes('4')) return false;
       return failureCount < 3;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 }

@@ -24,7 +24,9 @@ export class PromptManager {
   private static cacheExpiry: Map<string, number> = new Map();
   private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  static async getActivePrompt(promptType: string = 'marking'): Promise<PromptVersion | null> {
+  static async getActivePrompt(
+    promptType: string = 'marking'
+  ): Promise<PromptVersion | null> {
     const cacheKey = `active_${promptType}`;
     const now = Date.now();
 
@@ -34,8 +36,9 @@ export class PromptManager {
     }
 
     try {
-      const result = await db.rpc('get_active_prompt', {
-        prompt_type_param: promptType
+      const dbClient = await db;
+      const result = await dbClient.rpc('get_active_prompt', {
+        prompt_type_param: promptType,
       });
 
       if (result.data && result.data.length > 0) {
@@ -48,7 +51,7 @@ export class PromptManager {
           isActive: true,
           createdAt: new Date(),
           metadata: promptData.metadata || {},
-          performanceStats: {}
+          performanceStats: {},
         };
 
         // Cache the result
@@ -60,6 +63,7 @@ export class PromptManager {
 
       return null;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to fetch active prompt:', error);
       return this.getFallbackPrompt(promptType);
     }
@@ -78,7 +82,8 @@ export class PromptManager {
         await this.deactivateCurrentPrompt(promptType);
       }
 
-      const { data, error } = await db
+      const dbClient = await db;
+      const { data, error } = await dbClient
         .from('prompt_versions')
         .insert({
           version_number: versionNumber,
@@ -86,12 +91,13 @@ export class PromptManager {
           prompt_type: promptType,
           is_active: setAsActive,
           metadata,
-          performance_stats: {}
+          performance_stats: {},
         })
         .select()
         .single();
 
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to create prompt version:', error);
         return null;
       }
@@ -108,9 +114,10 @@ export class PromptManager {
         createdAt: new Date(data.created_at),
         createdBy: data.created_by,
         metadata: data.metadata || {},
-        performanceStats: data.performance_stats || {}
+        performanceStats: data.performance_stats || {},
       };
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to create prompt version:', error);
       return null;
     }
@@ -118,14 +125,17 @@ export class PromptManager {
 
   static async activatePromptVersion(promptId: string): Promise<boolean> {
     try {
+      const dbClient = await db;
+
       // Get the prompt to activate
-      const { data: promptData, error: fetchError } = await db
+      const { data: promptData, error: fetchError } = await dbClient
         .from('prompt_versions')
         .select('prompt_type')
         .eq('id', promptId)
         .single();
 
       if (fetchError || !promptData) {
+        // eslint-disable-next-line no-console
         console.error('Failed to fetch prompt for activation:', fetchError);
         return false;
       }
@@ -134,12 +144,13 @@ export class PromptManager {
       await this.deactivateCurrentPrompt(promptData.prompt_type);
 
       // Activate the new prompt
-      const { error: updateError } = await db
+      const { error: updateError } = await dbClient
         .from('prompt_versions')
         .update({ is_active: true })
         .eq('id', promptId);
 
       if (updateError) {
+        // eslint-disable-next-line no-console
         console.error('Failed to activate prompt:', updateError);
         return false;
       }
@@ -148,14 +159,19 @@ export class PromptManager {
       this.clearCache(promptData.prompt_type);
       return true;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to activate prompt version:', error);
       return false;
     }
   }
 
-  static async getPromptHistory(promptType: string = 'marking', limit: number = 10): Promise<PromptVersion[]> {
+  static async getPromptHistory(
+    promptType: string = 'marking',
+    limit: number = 10
+  ): Promise<PromptVersion[]> {
     try {
-      const { data, error } = await db
+      const dbClient = await db;
+      const { data, error } = await dbClient
         .from('prompt_versions')
         .select('*')
         .eq('prompt_type', promptType)
@@ -163,11 +179,12 @@ export class PromptManager {
         .limit(limit);
 
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to fetch prompt history:', error);
         return [];
       }
 
-      return data.map(item => ({
+      return data.map((item: any) => ({
         id: item.id,
         versionNumber: item.version_number,
         promptContent: item.prompt_content,
@@ -176,9 +193,10 @@ export class PromptManager {
         createdAt: new Date(item.created_at),
         createdBy: item.created_by,
         metadata: item.metadata || {},
-        performanceStats: item.performance_stats || {}
+        performanceStats: item.performance_stats || {},
       }));
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to fetch prompt history:', error);
       return [];
     }
@@ -189,33 +207,40 @@ export class PromptManager {
     stats: Record<string, any>
   ): Promise<boolean> {
     try {
-      const { error } = await db
+      const dbClient = await db;
+      const { error } = await dbClient
         .from('prompt_versions')
         .update({
-          performance_stats: stats
+          performance_stats: stats,
         })
         .eq('id', promptId);
 
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to update prompt stats:', error);
         return false;
       }
 
       return true;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to update prompt stats:', error);
       return false;
     }
   }
 
-  private static async deactivateCurrentPrompt(promptType: string): Promise<void> {
+  private static async deactivateCurrentPrompt(
+    promptType: string
+  ): Promise<void> {
     try {
-      await db
+      const dbClient = await db;
+      await dbClient
         .from('prompt_versions')
         .update({ is_active: false })
         .eq('prompt_type', promptType)
         .eq('is_active', true);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to deactivate current prompt:', error);
     }
   }
@@ -235,7 +260,7 @@ export class PromptManager {
       isActive: true,
       createdAt: new Date(),
       metadata: { source: 'fallback' },
-      performanceStats: {}
+      performanceStats: {},
     };
   }
 
@@ -267,9 +292,12 @@ Guidelines:
   }
 
   // Template builder for dynamic prompt construction
-  static buildPrompt(template: PromptTemplate, variables: Record<string, any>): string {
+  static buildPrompt(
+    template: PromptTemplate,
+    variables: Record<string, any>
+  ): string {
     let prompt = template.systemPrompt + '\n\n' + template.userPrompt;
-    
+
     // Replace variables in template
     Object.entries(variables).forEach(([key, value]) => {
       const placeholder = `{{${key}}}`;

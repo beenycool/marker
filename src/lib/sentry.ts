@@ -1,3 +1,5 @@
+// GDPR REMOVAL: All error tracking with user context commented out
+/*
 // Server-side only Sentry integration
 let Sentry: any = null;
 
@@ -19,7 +21,8 @@ export async function initializeSentry() {
     const environment = await getEnvVar('NODE_ENV') || 'development';
     
     if (!sentryDsn) {
-      console.warn('SENTRY_DSN not configured, skipping Sentry initialization');
+      // eslint-disable-next-line no-console
+console.warn('SENTRY_DSN not configured, skipping Sentry initialization');
       return;
     }
 
@@ -48,121 +51,124 @@ export async function initializeSentry() {
     });
 
     sentryInitialized = true;
-    console.log(`Sentry initialized for environment: ${environment}`);
+    // eslint-disable-next-line no-console
+console.log('Sentry initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize Sentry:', error);
+    // eslint-disable-next-line no-console
+console.error('Failed to initialize Sentry:', error);
   }
 }
 
-// Enhanced error capture with context
-export function captureAIProviderError(error: Error, context: {
-  provider: string;
-  model: string;
-  userId?: string;
-  sessionId?: string;
-  requestDetails?: any;
-}) {
-  if (!Sentry || typeof window !== 'undefined') return;
-  
+export function captureException(error: any, context?: any) {
+  if (!Sentry || !sentryInitialized) {
+    // eslint-disable-next-line no-console
+console.error('Sentry not initialized, logging error:', error);
+    return;
+  }
+
   Sentry.withScope((scope: any) => {
-    scope.setTag('error_type', 'ai_provider_failure');
-    scope.setTag('provider', context.provider);
-    scope.setTag('model', context.model);
-    
-    if (context.userId) {
-      scope.setUser({ id: context.userId });
+    if (context) {
+      Object.keys(context).forEach(key => {
+        scope.setTag(key, context[key]);
+      });
     }
-    
-    scope.setContext('ai_request', {
-      provider: context.provider,
-      model: context.model,
-      sessionId: context.sessionId,
-      requestDetails: context.requestDetails
-    });
-    
     Sentry.captureException(error);
   });
 }
 
-export function captureAPIError(error: Error, context: {
-  endpoint: string;
-  method: string;
-  userId?: string;
-  requestId?: string;
-  statusCode?: number;
-}) {
-  if (!Sentry || typeof window !== 'undefined') return;
-  
+export function captureMessage(message: string, level: 'debug' | 'info' | 'warning' | 'error' = 'info', context?: any) {
+  if (!Sentry || !sentryInitialized) {
+    // eslint-disable-next-line no-console
+console.log(`Sentry not initialized, logging message [${level}]:`, message);
+    return;
+  }
+
   Sentry.withScope((scope: any) => {
-    scope.setTag('error_type', 'api_error');
-    scope.setTag('endpoint', context.endpoint);
-    scope.setTag('method', context.method);
-    
-    if (context.statusCode) {
-      scope.setTag('status_code', context.statusCode.toString());
+    if (context) {
+      Object.keys(context).forEach(key => {
+        scope.setTag(key, context[key]);
+      });
     }
-    
-    if (context.userId) {
-      scope.setUser({ id: context.userId });
-    }
-    
-    scope.setContext('api_request', {
-      endpoint: context.endpoint,
-      method: context.method,
-      requestId: context.requestId,
-      statusCode: context.statusCode
-    });
-    
-    Sentry.captureException(error);
+    Sentry.captureMessage(message, level);
   });
 }
 
-export function captureBusinessMetric(metricName: string, value: number, tags: Record<string, string> = {}) {
-  if (!Sentry || typeof window !== 'undefined') return;
-  
-  Sentry.withScope((scope: any) => {
-    scope.setTag('metric_type', 'business');
-    Object.entries(tags).forEach(([key, val]) => {
-      scope.setTag(key, val);
-    });
-    
-    scope.setContext('metric_data', {
-      name: metricName,
-      value,
-      timestamp: new Date().toISOString(),
-      tags
-    });
-    
-    // Create a custom event for business metrics
-    Sentry.addBreadcrumb({
-      category: 'business_metric',
-      message: `${metricName}: ${value}`,
-      level: 'info',
-      data: { value, tags }
-    });
+export function setUserContext(user: { id: string; email?: string; tier?: string }) {
+  if (!Sentry || !sentryInitialized) return;
+
+  Sentry.setUser({
+    id: user.id,
+    email: user.email,
+    tier: user.tier,
   });
 }
 
-// Performance monitoring  
-export function startTransaction(name: string, operation: string) {
-  if (!Sentry || typeof window !== 'undefined') return null;
-  
-  return Sentry.startTransaction({
-    name,
-    op: operation
-  });
+export function clearUserContext() {
+  if (!Sentry || !sentryInitialized) return;
+  Sentry.setUser(null);
 }
 
-export function addBreadcrumb(message: string, category: string, data?: any) {
-  if (!Sentry || typeof window !== 'undefined') return;
-  
+export function addBreadcrumb(message: string, category?: string, level?: string, data?: any) {
+  if (!Sentry || !sentryInitialized) return;
+
   Sentry.addBreadcrumb({
     message,
-    category,
+    category: category || 'custom',
+    level: level || 'info',
     data,
-    level: 'info',
-    timestamp: Date.now() / 1000
+    timestamp: Date.now() / 1000,
   });
 }
 
-export { Sentry };
+export function startTransaction(name: string, op?: string) {
+  if (!Sentry || !sentryInitialized) return null;
+
+  return Sentry.startTransaction({
+    name,
+    op: op || 'custom',
+  });
+}
+*/
+
+// GDPR-SAFE: No error tracking with user context
+export async function initializeSentry() {
+  // No initialization - no tracking
+}
+
+export function captureException(error: any, _context?: any) {
+  // Simple console logging without user data
+  // eslint-disable-next-line no-console
+  console.error('Error occurred:', error);
+}
+
+export function captureMessage(
+  message: string,
+  level: 'debug' | 'info' | 'warning' | 'error' = 'info',
+  _context?: any
+) {
+  // Simple console logging
+  // eslint-disable-next-line no-console
+  console.log(`[${level}]: ${message}`);
+}
+
+export function setUserContext(_user: any) {
+  // No user context tracking
+}
+
+export function clearUserContext() {
+  // No user context to clear
+}
+
+export function addBreadcrumb(
+  _message: string,
+  _category?: string,
+  _level?: string,
+  _data?: any
+) {
+  // No breadcrumb tracking
+}
+
+export function startTransaction(_name: string, _op?: string) {
+  // No transaction tracking
+  return null;
+}

@@ -67,78 +67,79 @@ export class AlertingSystem {
   }
 
   private initializeDefaultRules() {
-    const defaultRules: Omit<AlertRule, 'id' | 'created_at' | 'updated_at'>[] = [
-      {
-        name: 'High API Error Rate',
-        description: 'API error rate exceeds 5% over 5 minutes',
-        metric: 'api.errors',
-        condition: 'gt',
-        threshold: 0.05,
-        window_minutes: 5,
-        severity: 'high',
-        enabled: true,
-      },
-      {
-        name: 'AI Provider Failures',
-        description: 'AI provider failure rate exceeds 10% over 10 minutes',
-        metric: 'ai.errors',
-        condition: 'gt',
-        threshold: 0.1,
-        window_minutes: 10,
-        severity: 'high',
-        enabled: true,
-      },
-      {
-        name: 'Slow API Response Time',
-        description: 'Average API response time exceeds 2 seconds',
-        metric: 'api.duration',
-        condition: 'gt',
-        threshold: 2000,
-        window_minutes: 5,
-        severity: 'medium',
-        enabled: true,
-      },
-      {
-        name: 'High AI Costs',
-        description: 'Hourly AI costs exceed $10',
-        metric: 'ai.cost',
-        condition: 'gt',
-        threshold: 10,
-        window_minutes: 60,
-        severity: 'medium',
-        enabled: true,
-      },
-      {
-        name: 'Database Query Failures',
-        description: 'Database error rate exceeds 2%',
-        metric: 'database.errors',
-        condition: 'gt',
-        threshold: 0.02,
-        window_minutes: 5,
-        severity: 'high',
-        enabled: true,
-      },
-      {
-        name: 'Low User Satisfaction',
-        description: 'User rating drops below 3.5',
-        metric: 'user.rating',
-        condition: 'lt',
-        threshold: 3.5,
-        window_minutes: 30,
-        severity: 'medium',
-        enabled: true,
-      },
-      {
-        name: 'Golden Dataset Degradation',
-        description: 'Golden dataset pass rate drops below 80%',
-        metric: 'golden_dataset.pass_rate',
-        condition: 'lt',
-        threshold: 0.8,
-        window_minutes: 60,
-        severity: 'critical',
-        enabled: true,
-      },
-    ];
+    const defaultRules: Omit<AlertRule, 'id' | 'created_at' | 'updated_at'>[] =
+      [
+        {
+          name: 'High API Error Rate',
+          description: 'API error rate exceeds 5% over 5 minutes',
+          metric: 'api.errors',
+          condition: 'gt',
+          threshold: 0.05,
+          window_minutes: 5,
+          severity: 'high',
+          enabled: true,
+        },
+        {
+          name: 'AI Provider Failures',
+          description: 'AI provider failure rate exceeds 10% over 10 minutes',
+          metric: 'ai.errors',
+          condition: 'gt',
+          threshold: 0.1,
+          window_minutes: 10,
+          severity: 'high',
+          enabled: true,
+        },
+        {
+          name: 'Slow API Response Time',
+          description: 'Average API response time exceeds 2 seconds',
+          metric: 'api.duration',
+          condition: 'gt',
+          threshold: 2000,
+          window_minutes: 5,
+          severity: 'medium',
+          enabled: true,
+        },
+        {
+          name: 'High AI Costs',
+          description: 'Hourly AI costs exceed $10',
+          metric: 'ai.cost',
+          condition: 'gt',
+          threshold: 10,
+          window_minutes: 60,
+          severity: 'medium',
+          enabled: true,
+        },
+        {
+          name: 'Database Query Failures',
+          description: 'Database error rate exceeds 2%',
+          metric: 'database.errors',
+          condition: 'gt',
+          threshold: 0.02,
+          window_minutes: 5,
+          severity: 'high',
+          enabled: true,
+        },
+        {
+          name: 'Low User Satisfaction',
+          description: 'User rating drops below 3.5',
+          metric: 'user.rating',
+          condition: 'lt',
+          threshold: 3.5,
+          window_minutes: 30,
+          severity: 'medium',
+          enabled: true,
+        },
+        {
+          name: 'Golden Dataset Degradation',
+          description: 'Golden dataset pass rate drops below 80%',
+          metric: 'golden_dataset.pass_rate',
+          condition: 'lt',
+          threshold: 0.8,
+          window_minutes: 60,
+          severity: 'critical',
+          enabled: true,
+        },
+      ];
 
     // Create default rules if they don't exist
     defaultRules.forEach(rule => {
@@ -157,7 +158,9 @@ export class AlertingSystem {
     setTimeout(() => this.checkAllRules(), 5000);
   }
 
-  async createRule(rule: Omit<AlertRule, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  async createRule(
+    rule: Omit<AlertRule, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<string> {
     const newRule: AlertRule = {
       ...rule,
       id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -231,14 +234,24 @@ export class AlertingSystem {
 
   private async checkRule(rule: AlertRule): Promise<void> {
     const endTime = new Date();
-    const startTime = new Date(endTime.getTime() - rule.window_minutes * 60 * 1000);
+    const startTime = new Date(
+      endTime.getTime() - rule.window_minutes * 60 * 1000
+    );
 
     try {
       // Calculate the metric value for the time window
-      const metricValue = await this.calculateMetricValue(rule, startTime, endTime);
-      
+      const metricValue = await this.calculateMetricValue(
+        rule,
+        startTime,
+        endTime
+      );
+
       // Check if the condition is met
-      const conditionMet = this.evaluateCondition(metricValue, rule.condition, rule.threshold);
+      const conditionMet = this.evaluateCondition(
+        metricValue,
+        rule.condition,
+        rule.threshold
+      );
 
       const alertKey = `${rule.id}_${rule.metric}`;
       const existingAlert = this.activeAlerts.get(alertKey);
@@ -246,7 +259,11 @@ export class AlertingSystem {
       if (conditionMet && !existingAlert) {
         // Fire new alert
         await this.fireAlert(rule, metricValue);
-      } else if (!conditionMet && existingAlert && existingAlert.status === 'firing') {
+      } else if (
+        !conditionMet &&
+        existingAlert &&
+        existingAlert.status === 'firing'
+      ) {
         // Resolve existing alert
         await this.resolveAlert(existingAlert);
       }
@@ -264,27 +281,55 @@ export class AlertingSystem {
     if (rule.metric.includes('errors') || rule.metric.includes('rate')) {
       const errorMetric = rule.metric;
       const totalMetric = errorMetric.replace('.errors', '.requests');
-      
+
       const [errors, total] = await Promise.all([
-        metrics.getAggregatedMetrics(errorMetric, startTime, endTime, 'sum', rule.tags),
-        metrics.getAggregatedMetrics(totalMetric, startTime, endTime, 'sum', rule.tags),
+        metrics.getAggregatedMetrics(
+          errorMetric,
+          startTime,
+          endTime,
+          'sum',
+          rule.tags
+        ),
+        metrics.getAggregatedMetrics(
+          totalMetric,
+          startTime,
+          endTime,
+          'sum',
+          rule.tags
+        ),
       ]);
 
       return total > 0 ? errors / total : 0;
     }
 
     // For other metrics, use average
-    return metrics.getAggregatedMetrics(rule.metric, startTime, endTime, 'avg', rule.tags);
+    return metrics.getAggregatedMetrics(
+      rule.metric,
+      startTime,
+      endTime,
+      'avg',
+      rule.tags
+    );
   }
 
-  private evaluateCondition(value: number, condition: string, threshold: number): boolean {
+  private evaluateCondition(
+    value: number,
+    condition: string,
+    threshold: number
+  ): boolean {
     switch (condition) {
-      case 'gt': return value > threshold;
-      case 'gte': return value >= threshold;
-      case 'lt': return value < threshold;
-      case 'lte': return value <= threshold;
-      case 'eq': return value === threshold;
-      default: return false;
+      case 'gt':
+        return value > threshold;
+      case 'gte':
+        return value >= threshold;
+      case 'lt':
+        return value < threshold;
+      case 'lte':
+        return value <= threshold;
+      case 'eq':
+        return value === threshold;
+      default:
+        return false;
     }
   }
 
@@ -311,10 +356,10 @@ export class AlertingSystem {
       }
 
       this.activeAlerts.set(`${rule.id}_${rule.metric}`, alert);
-      
+
       // Send notifications
       await this.sendAlertNotifications(alert);
-      
+
       logger.warn(`Alert fired: ${alert.message}`);
     } catch (error) {
       logger.error('Failed to fire alert:', error);
@@ -332,12 +377,15 @@ export class AlertingSystem {
       if (this.supabase) {
         await this.supabase
           .from('alerts')
-          .update({ status: 'resolved', resolved_at: resolvedAlert.resolved_at })
+          .update({
+            status: 'resolved',
+            resolved_at: resolvedAlert.resolved_at,
+          })
           .eq('id', alert.id);
       }
 
       this.activeAlerts.delete(`${alert.rule_id}_${alert.metadata.metric}`);
-      
+
       logger.info(`Alert resolved: ${alert.message}`);
     } catch (error) {
       logger.error('Failed to resolve alert:', error);
@@ -345,7 +393,7 @@ export class AlertingSystem {
   }
 
   private async sendAlertNotifications(alert: Alert): Promise<void> {
-    const relevantChannels = this.channels.filter(channel => 
+    const relevantChannels = this.channels.filter(channel =>
       channel.severity_filter.includes(alert.severity)
     );
 
@@ -358,18 +406,33 @@ export class AlertingSystem {
     }
   }
 
-  private async sendNotification(channel: AlertChannel, alert: Alert): Promise<void> {
+  private async sendNotification(
+    channel: AlertChannel,
+    alert: Alert
+  ): Promise<void> {
     const message = this.formatAlertMessage(alert);
 
     switch (channel.type) {
       case 'webhook':
-        await this.sendWebhookNotification(channel.config.webhook_url!, alert, message);
+        await this.sendWebhookNotification(
+          channel.config.webhook_url!,
+          alert,
+          message
+        );
         break;
       case 'slack':
-        await this.sendSlackNotification(channel.config.webhook_url!, alert, message);
+        await this.sendSlackNotification(
+          channel.config.webhook_url!,
+          alert,
+          message
+        );
         break;
       case 'discord':
-        await this.sendDiscordNotification(channel.config.webhook_url!, alert, message);
+        await this.sendDiscordNotification(
+          channel.config.webhook_url!,
+          alert,
+          message
+        );
         break;
       case 'email':
         // Email implementation would go here
@@ -378,7 +441,11 @@ export class AlertingSystem {
     }
   }
 
-  private async sendWebhookNotification(url: string, alert: Alert, message: string): Promise<void> {
+  private async sendWebhookNotification(
+    url: string,
+    alert: Alert,
+    message: string
+  ): Promise<void> {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -397,26 +464,44 @@ export class AlertingSystem {
     }
   }
 
-  private async sendSlackNotification(url: string, alert: Alert, message: string): Promise<void> {
+  private async sendSlackNotification(
+    url: string,
+    alert: Alert,
+    message: string
+  ): Promise<void> {
     const color = this.getSeverityColor(alert.severity);
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        attachments: [{
-          color,
-          title: `🚨 ${alert.severity.toUpperCase()} Alert`,
-          text: message,
-          fields: [
-            { title: 'Severity', value: alert.severity, short: true },
-            { title: 'Triggered', value: new Date(alert.triggered_at).toLocaleString(), short: true },
-            { title: 'Value', value: alert.metadata.value?.toFixed(2) || 'N/A', short: true },
-            { title: 'Threshold', value: alert.metadata.threshold?.toString() || 'N/A', short: true },
-          ],
-          footer: 'AIMARKER Monitoring',
-          ts: Math.floor(new Date(alert.triggered_at).getTime() / 1000),
-        }],
+        attachments: [
+          {
+            color,
+            title: `🚨 ${alert.severity.toUpperCase()} Alert`,
+            text: message,
+            fields: [
+              { title: 'Severity', value: alert.severity, short: true },
+              {
+                title: 'Triggered',
+                value: new Date(alert.triggered_at).toLocaleString(),
+                short: true,
+              },
+              {
+                title: 'Value',
+                value: alert.metadata.value?.toFixed(2) || 'N/A',
+                short: true,
+              },
+              {
+                title: 'Threshold',
+                value: alert.metadata.threshold?.toString() || 'N/A',
+                short: true,
+              },
+            ],
+            footer: 'AIMARKER Monitoring',
+            ts: Math.floor(new Date(alert.triggered_at).getTime() / 1000),
+          },
+        ],
       }),
     });
 
@@ -425,26 +510,44 @@ export class AlertingSystem {
     }
   }
 
-  private async sendDiscordNotification(url: string, alert: Alert, message: string): Promise<void> {
+  private async sendDiscordNotification(
+    url: string,
+    alert: Alert,
+    message: string
+  ): Promise<void> {
     const color = this.getSeverityColorInt(alert.severity);
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        embeds: [{
-          title: `🚨 ${alert.severity.toUpperCase()} Alert`,
-          description: message,
-          color: color,
-          fields: [
-            { name: 'Severity', value: alert.severity, inline: true },
-            { name: 'Triggered', value: new Date(alert.triggered_at).toLocaleString(), inline: true },
-            { name: 'Value', value: alert.metadata.value?.toFixed(2) || 'N/A', inline: true },
-            { name: 'Threshold', value: alert.metadata.threshold?.toString() || 'N/A', inline: true },
-          ],
-          footer: { text: 'AIMARKER Monitoring' },
-          timestamp: alert.triggered_at,
-        }],
+        embeds: [
+          {
+            title: `🚨 ${alert.severity.toUpperCase()} Alert`,
+            description: message,
+            color: color,
+            fields: [
+              { name: 'Severity', value: alert.severity, inline: true },
+              {
+                name: 'Triggered',
+                value: new Date(alert.triggered_at).toLocaleString(),
+                inline: true,
+              },
+              {
+                name: 'Value',
+                value: alert.metadata.value?.toFixed(2) || 'N/A',
+                inline: true,
+              },
+              {
+                name: 'Threshold',
+                value: alert.metadata.threshold?.toString() || 'N/A',
+                inline: true,
+              },
+            ],
+            footer: { text: 'AIMARKER Monitoring' },
+            timestamp: alert.triggered_at,
+          },
+        ],
       }),
     });
 
@@ -459,21 +562,31 @@ export class AlertingSystem {
 
   private getSeverityColor(severity: string): string {
     switch (severity) {
-      case 'critical': return 'danger';
-      case 'high': return 'warning';
-      case 'medium': return 'good';
-      case 'low': return '#36a64f';
-      default: return 'good';
+      case 'critical':
+        return 'danger';
+      case 'high':
+        return 'warning';
+      case 'medium':
+        return 'good';
+      case 'low':
+        return '#36a64f';
+      default:
+        return 'good';
     }
   }
 
   private getSeverityColorInt(severity: string): number {
     switch (severity) {
-      case 'critical': return 0xff0000; // Red
-      case 'high': return 0xff8c00; // Orange
-      case 'medium': return 0xffff00; // Yellow
-      case 'low': return 0x36a64f; // Green
-      default: return 0x36a64f;
+      case 'critical':
+        return 0xff0000; // Red
+      case 'high':
+        return 0xff8c00; // Orange
+      case 'medium':
+        return 0xffff00; // Yellow
+      case 'low':
+        return 0x36a64f; // Green
+      default:
+        return 0x36a64f;
     }
   }
 

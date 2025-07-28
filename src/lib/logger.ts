@@ -1,3 +1,5 @@
+// GDPR REMOVAL: All structured logging with user data commented out
+/*
 // Logger module: no import needed for logger itself
 import { clientEnv } from '@/lib/env';
 import { initializeSentry, Sentry, captureAIProviderError, captureAPIError } from './sentry';
@@ -49,274 +51,274 @@ interface APIEvent extends BaseEvent {
   ip?: string;
 }
 
+// Production logger for structured events
 class Logger {
-  private static instance: Logger;
-  private logLevel: LogLevel;
-  private productionLogger: any;
+  private isDevelopment: boolean;
+  private sessionId: string;
 
-  private constructor() {
-    this.logLevel = (clientEnv.LOG_LEVEL as LogLevel) || 'info';
-    this.setupProductionLogging();
-    // Initialize Sentry asynchronously
-    initializeSentry().catch(console.error);
-  }
-
-  public static getInstance(): Logger {
-    if (!Logger.instance) {
-      Logger.instance = new Logger();
+  constructor() {
+    this.isDevelopment = clientEnv.NODE_ENV === 'development';
+    this.sessionId = this.generateSessionId();
+    
+    // Initialize Sentry for production error tracking
+    if (!this.isDevelopment) {
+      initializeSentry();
     }
-    return Logger.instance;
   }
 
-  private shouldLog(level: LogLevel): boolean {
-    const levels: Record<LogLevel, number> = {
-      debug: 0,
-      info: 1,
-      warn: 2,
-      error: 3,
+  private generateSessionId(): string {
+    return `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+  }
+
+  private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
+    const timestamp = new Date().toISOString();
+    const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+    return `[${timestamp}] ${level.toUpperCase()}: ${message}${contextStr}`;
+  }
+
+  debug(message: string, context?: LogContext) {
+    if (this.isDevelopment) {
+      console.debug(this.formatMessage('debug', message, context));
+    }
+  }
+
+  info(message: string, context?: LogContext) {
+    const formatted = this.formatMessage('info', message, context);
+    console.info(formatted);
+    
+    if (!this.isDevelopment && context?.userId) {
+      // Send structured log to monitoring service
+      this.sendStructuredLog('info', message, context);
+    }
+  }
+
+  warn(message: string, context?: LogContext) {
+    const formatted = this.formatMessage('warn', message, context);
+    console.warn(formatted);
+    
+    if (!this.isDevelopment) {
+      this.sendStructuredLog('warn', message, context);
+    }
+  }
+
+  error(message: string, error?: Error | unknown, context?: LogContext) {
+    const formatted = this.formatMessage('error', message, context);
+    console.error(formatted, error);
+    
+    if (!this.isDevelopment) {
+      // Send to error tracking service
+      if (error instanceof Error) {
+        captureAIProviderError?.(error, context);
+      } else {
+        captureAPIError?.(new Error(message), context);
+      }
+      
+      this.sendStructuredLog('error', message, { ...context, error: error?.toString() });
+    }
+  }
+
+  // Structured event logging for production observability
+  logAIProviderEvent(event: Omit<AIProviderEvent, 'timestamp' | 'sessionId'>) {
+    const fullEvent: AIProviderEvent = {
+      ...event,
+      timestamp: new Date().toISOString(),
+      sessionId: this.sessionId,
     };
-    return levels[level] >= levels[this.logLevel];
+
+    if (this.isDevelopment) {
+      console.info('AI Provider Event:', fullEvent);
+    } else {
+      this.sendEventLog('ai_provider', fullEvent);
+    }
   }
 
+  logDatabaseEvent(event: Omit<DatabaseEvent, 'timestamp' | 'sessionId'>) {
+    const fullEvent: DatabaseEvent = {
+      ...event,
+      timestamp: new Date().toISOString(),
+      sessionId: this.sessionId,
+    };
+
+    if (this.isDevelopment) {
+      console.info('Database Event:', fullEvent);
+    } else {
+      this.sendEventLog('database', fullEvent);
+    }
+  }
+
+  logUserEvent(event: Omit<UserEvent, 'timestamp' | 'sessionId'>) {
+    const fullEvent: UserEvent = {
+      ...event,
+      timestamp: new Date().toISOString(),
+      sessionId: this.sessionId,
+    };
+
+    if (this.isDevelopment) {
+      console.info('User Event:', fullEvent);
+    } else {
+      this.sendEventLog('user', fullEvent);
+    }
+  }
+
+  logAPIEvent(event: Omit<APIEvent, 'timestamp' | 'sessionId'>) {
+    const fullEvent: APIEvent = {
+      ...event,
+      timestamp: new Date().toISOString(),
+      sessionId: this.sessionId,
+    };
+
+    if (this.isDevelopment) {
+      console.info('API Event:', fullEvent);
+    } else {
+      this.sendEventLog('api', fullEvent);
+    }
+  }
+
+  private sendStructuredLog(level: LogLevel, message: string, context?: LogContext) {
+    // In production, this would send to a logging service like DataDog, Logflare, etc.
+    // For now, we'll just ensure it's properly formatted
+    const logEntry = {
+      level,
+      message,
+      timestamp: new Date().toISOString(),
+      sessionId: this.sessionId,
+      ...context,
+    };
+
+    // Send to external logging service
+    this.sendToLoggingService(logEntry);
+  }
+
+  private sendEventLog(eventType: string, event: any) {
+    // Send structured events to monitoring/analytics service
+    this.sendToLoggingService({
+      type: 'event',
+      eventType,
+      ...event,
+    });
+  }
+
+  private sendToLoggingService(data: any) {
+    // Implementation would depend on the logging service
+    // Could be DataDog, Logflare, or custom endpoint
+    if (typeof window !== 'undefined') {
+      // Client-side logging
+      this.sendClientLog(data);
+    } else {
+      // Server-side logging
+      this.sendServerLog(data);
+    }
+  }
+
+  private sendClientLog(data: any) {
+    // Send to client-side logging endpoint
+    // Batched and rate-limited for performance
+    try {
+      fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).catch(console.error);
+    } catch (error) {
+      console.error('Failed to send client log:', error);
+    }
+  }
+
+  private sendServerLog(data: any) {
+    // Send to server-side logging service
+    // Would use appropriate SDK or HTTP client
+    console.log('Server log:', JSON.stringify(data));
+  }
+}
+
+export const logger = new Logger();
+*/
+
+// GDPR-SAFE: Simple console logging without user data
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+interface LogContext {
+  [key: string]: any;
+}
+
+class Logger {
   private formatMessage(
     level: LogLevel,
     message: string,
     context?: LogContext
   ): string {
     const timestamp = new Date().toISOString();
-    const contextStr = context ? ` ${JSON.stringify(context)}` : '';
-    return `[${timestamp}] [${level.toUpperCase()}] ${message}${contextStr}`;
+    // Filter out any potential personal data from context
+    const safeContext = context ? this.sanitizeContext(context) : {};
+    const contextStr =
+      Object.keys(safeContext).length > 0
+        ? ` ${JSON.stringify(safeContext)}`
+        : '';
+    return `[${timestamp}] ${level.toUpperCase()}: ${message}${contextStr}`;
   }
 
-  private async setupProductionLogging() {
-    try {
-      const { getEnvVar } = await import('./cloudflare-env');
-      const logService = await getEnvVar('LOGGING_SERVICE');
-
-      if (logService === 'sentry') {
-        const sentryDsn = await getEnvVar('SENTRY_DSN');
-        if (sentryDsn) {
-          // Skip Sentry initialization in Cloudflare Workers environment
-          // as @sentry/node is not compatible with Workers
-          console.warn(
-            'Sentry logging not available in Cloudflare Workers environment'
-          );
-        }
-      } else if (logService === 'logflare') {
-        const logflareKey = await getEnvVar('LOGFLARE_API_KEY');
-        const logflareId = await getEnvVar('LOGFLARE_SOURCE_ID');
-        if (logflareKey && logflareId) {
-          // Skip winston-logflare in Cloudflare Workers as it has Node.js dependencies
-          console.warn(
-            'Winston-Logflare logging not available in Cloudflare Workers environment'
-          );
-        }
-      } else if (logService === 'datadog') {
-        const datadogKey = await getEnvVar('DATADOG_API_KEY');
-        if (datadogKey) {
-          const { datadogLogs } = await import('@datadog/browser-logs');
-          datadogLogs.init({
-            clientToken: datadogKey,
-            site: 'datadoghq.com',
-            forwardErrorsToLogs: true,
-          });
-          this.productionLogger = datadogLogs;
-        }
+  private sanitizeContext(context: LogContext): LogContext {
+    const safe: LogContext = {};
+    for (const [key, value] of Object.entries(context)) {
+      // Skip fields that might contain personal data
+      if (!['userId', 'email', 'ip', 'userAgent', 'sessionId'].includes(key)) {
+        safe[key] = value;
       }
-    } catch (error) {
-      console.error('Failed to initialize production logging:', error);
     }
+    return safe;
   }
 
   debug(message: string, context?: LogContext) {
-    if (this.shouldLog('debug')) {
-      // eslint-disable-next-line no-console
-      console.debug(this.formatMessage('debug', message, context));
-    }
+    // eslint-disable-next-line no-console
+    console.debug(this.formatMessage('debug', message, context));
   }
 
   info(message: string, context?: LogContext) {
-    if (this.shouldLog('info')) {
-      // eslint-disable-next-line no-console
-      console.info(this.formatMessage('info', message, context));
-
-      // Send to production logger if available
-      if (this.productionLogger) {
-        if (this.productionLogger.captureMessage) {
-          this.productionLogger.captureMessage(message, 'info', context);
-        } else if (this.productionLogger.logger) {
-          this.productionLogger.logger.info(message, context);
-        }
-      }
-    }
+    // eslint-disable-next-line no-console
+    console.info(this.formatMessage('info', message, context));
   }
 
   warn(message: string, context?: LogContext) {
-    if (this.shouldLog('warn')) {
-      // eslint-disable-next-line no-console
-      console.warn(this.formatMessage('warn', message, context));
-
-      // Send to production logger if available
-      if (this.productionLogger) {
-        if (this.productionLogger.captureMessage) {
-          this.productionLogger.captureMessage(message, 'warning', context);
-        } else if (this.productionLogger.logger) {
-          this.productionLogger.logger.warn(message, context);
-        }
-      }
-    }
+    // eslint-disable-next-line no-console
+    console.warn(this.formatMessage('warn', message, context));
   }
 
-  error(message: string, error?: Error | any, context?: LogContext) {
-    if (this.shouldLog('error')) {
-      const errorContext = error
-        ? { error: error.message || error, stack: error.stack }
-        : {};
-      // eslint-disable-next-line no-console
-      console.error(
-        this.formatMessage('error', message, { ...context, ...errorContext })
-      );
-
-      // Send to Sentry for error tracking
-      if (Sentry && typeof window === 'undefined') {
-        if (error instanceof Error) {
-          Sentry.withScope((scope: any) => {
-            if (context) {
-              Object.entries(context).forEach(([key, value]) => {
-                scope.setExtra(key, value);
-              });
-            }
-            scope.setLevel('error');
-            Sentry.captureException(error);
-          });
-        } else {
-          Sentry.captureMessage(message, 'error');
-        }
-      }
-
-      // Send to production logger if available
-      if (this.productionLogger) {
-        if (this.productionLogger.captureException) {
-          this.productionLogger.captureException(error || new Error(message), {
-            contexts: { context },
-          });
-        } else if (this.productionLogger.logger) {
-          this.productionLogger.logger.error(message, {
-            ...context,
-            ...errorContext,
-          });
-        }
-      }
-    }
+  error(message: string, error?: Error | unknown, context?: LogContext) {
+    // eslint-disable-next-line no-console
+    console.error(this.formatMessage('error', message, context), error);
   }
 
-  // Structured event logging methods
-  logAIProviderEvent(event: Omit<AIProviderEvent, 'timestamp'>) {
-    const fullEvent: AIProviderEvent = {
-      ...event,
-      timestamp: new Date().toISOString(),
-    };
-    
-    // Log failures as warnings for alerting
-    if (!fullEvent.success) {
-      this.warn('AI Provider Event Failed', fullEvent);
-      
-      // Send AI provider failures to Sentry for alerting
-      captureAIProviderError(new Error(`AI Provider ${fullEvent.provider} failed: ${fullEvent.errorCode || 'Unknown error'}`), {
-        provider: fullEvent.provider,
-        model: fullEvent.model,
-        userId: fullEvent.userId,
-        sessionId: fullEvent.sessionId,
-        requestDetails: {
-          latencyMs: fullEvent.latencyMs,
-          costUsd: fullEvent.costUsd,
-          errorCode: fullEvent.errorCode
-        }
-      });
-    } else {
-      this.info('AI Provider Event', fullEvent);
-    }
-    
-    // Send structured event to production logger
-    if (this.productionLogger && this.productionLogger.logger) {
-      this.productionLogger.logger.info('ai_provider_event', fullEvent);
-    }
+  // No-op event logging methods - no data collection
+  logAIProviderEvent(event: any) {
+    // eslint-disable-next-line no-console
+    console.info('AI Provider Event (sanitized):', {
+      provider: event.provider,
+      success: event.success,
+      latencyMs: event.latencyMs,
+    });
   }
 
-  logDatabaseEvent(event: Omit<DatabaseEvent, 'timestamp'>) {
-    const fullEvent: DatabaseEvent = {
-      ...event,
-      timestamp: new Date().toISOString(),
-    };
-    
-    if (event.queryTimeMs > 1000) {
-      this.warn('Slow Database Query', fullEvent);
-    } else {
-      this.debug('Database Event', fullEvent);
-    }
-    
-    if (this.productionLogger && this.productionLogger.logger) {
-      this.productionLogger.logger.info('database_event', fullEvent);
-    }
+  logDatabaseEvent(event: any) {
+    // eslint-disable-next-line no-console
+    console.info('Database Event (sanitized):', {
+      operation: event.operation,
+      success: event.success,
+      queryTimeMs: event.queryTimeMs,
+    });
   }
 
-  logUserEvent(event: Omit<UserEvent, 'timestamp'>) {
-    const fullEvent: UserEvent = {
-      ...event,
-      timestamp: new Date().toISOString(),
-    };
-    
-    this.info('User Event', fullEvent);
-    
-    if (this.productionLogger && this.productionLogger.logger) {
-      this.productionLogger.logger.info('user_event', fullEvent);
-    }
+  logUserEvent(_event: any) {
+    // No user event logging
   }
 
-  logAPIEvent(event: Omit<APIEvent, 'timestamp'>) {
-    const fullEvent: APIEvent = {
-      ...event,
-      timestamp: new Date().toISOString(),
-    };
-    
-    if (fullEvent.statusCode >= 500) {
-      this.error('API Server Error', undefined, fullEvent);
-      
-      // Send 5xx errors to Sentry for immediate alerting
-      captureAPIError(new Error(`API Error ${fullEvent.statusCode} on ${fullEvent.endpoint}`), {
-        endpoint: fullEvent.endpoint,
-        method: fullEvent.method,
-        userId: fullEvent.userId,
-        requestId: fullEvent.sessionId,
-        statusCode: fullEvent.statusCode
-      });
-    } else if (fullEvent.statusCode >= 400) {
-      this.warn('API Client Error', fullEvent);
-    } else if (fullEvent.responseTimeMs > 2000) {
-      this.warn('Slow API Response', fullEvent);
-      
-      // Alert on consistently slow responses
-      if (fullEvent.responseTimeMs > 5000 && Sentry && typeof window === 'undefined') {
-        Sentry.captureMessage(`Very slow API response: ${fullEvent.endpoint} took ${fullEvent.responseTimeMs}ms`, 'warning');
-      }
-    } else {
-      this.debug('API Event', fullEvent);
-    }
-    
-    if (this.productionLogger && this.productionLogger.logger) {
-      this.productionLogger.logger.info('api_event', fullEvent);
-    }
-  }
-
-  // Helper method to create base event context
-  createBaseEvent(userId?: string, submissionId?: string, sessionId?: string): BaseEvent {
-    return {
-      timestamp: new Date().toISOString(),
-      userId,
-      submissionId,
-      sessionId,
-    };
+  logAPIEvent(event: any) {
+    // eslint-disable-next-line no-console
+    console.info('API Event (sanitized):', {
+      endpoint: event.endpoint,
+      method: event.method,
+      statusCode: event.statusCode,
+    });
   }
 }
 
-export const logger = Logger.getInstance();
+export const logger = new Logger();

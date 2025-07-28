@@ -1,3 +1,5 @@
+// GDPR REMOVAL: All personal data collection commented out
+/*
 import { rateLimiters, rateLimit } from '@/lib/rate-limit';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { getEnvVar } from '@/lib/cloudflare-env';
@@ -10,9 +12,11 @@ function generateNonce(): string {
   const nonce = getNonce();
   return nonce || crypto.randomUUID();
 }
+*/
 
-
-export default async function middleware(req: Request) {
+export default async function middleware() {
+  // GDPR REMOVAL: All IP tracking, rate limiting, and auth checking disabled
+  /*
   const url = new URL(req.url);
   const { pathname } = url;
 
@@ -23,7 +27,7 @@ export default async function middleware(req: Request) {
   if (pathname.startsWith('/api/')) {
     let limiter = rateLimiters.api;
 
-    // Get IP address from Cloudflare headers or fallback
+    // Get IP address from Cloudflare headers or fallback - COLLECTS PERSONAL DATA
     let identifier =
       req.headers.get('cf-connecting-ip') ||
       req.headers.get('x-forwarded-for') ||
@@ -74,7 +78,7 @@ export default async function middleware(req: Request) {
 
   }
 
-  // Protected routes that require authentication
+  // Protected routes that require authentication - COLLECTS USER DATA
   const protectedRoutes = ['/dashboard', '/settings', '/mark', '/past-papers'];
   const isProtectedRoute = protectedRoutes.some(route =>
     pathname.startsWith(route)
@@ -114,26 +118,10 @@ export default async function middleware(req: Request) {
   }
 
   return addCSPHeader(new Response(null, { status: 200 }), nonce);
-}
+  */
 
-// Add nonce to response for CSP
-function addCSPHeader(response: Response, nonce: string) {
-  const cspHeader = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https:",
-    "connect-src 'self' https://api.stripe.com https://api.openrouter.ai https://generativelanguage.googleapis.com",
-    'frame-src https://js.stripe.com https://hooks.stripe.com',
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    'upgrade-insecure-requests',
-  ].join('; ');
-
-  response.headers.set('Content-Security-Policy', cspHeader);
-  return response;
+  // Simple passthrough - no personal data collection
+  return new Response(null, { status: 200 });
 }
 
 export const config = {

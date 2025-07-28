@@ -17,7 +17,9 @@ export const createMockUser = (overrides: Partial<User> = {}): User => ({
 /**
  * Mock factory for creating test marking requests
  */
-export const createMockMarkingRequest = (overrides: Partial<MarkingRequest> = {}): MarkingRequest => ({
+export const createMockMarkingRequest = (
+  overrides: Partial<MarkingRequest> = {}
+): MarkingRequest => ({
   question: 'What is 2 + 2?',
   answer: '2 + 2 = 4',
   subject: 'Mathematics',
@@ -30,13 +32,15 @@ export const createMockMarkingRequest = (overrides: Partial<MarkingRequest> = {}
 /**
  * Mock factory for creating test marking responses
  */
-export const createMockMarkingResponse = (overrides: Partial<MarkingResponse> = {}): MarkingResponse => ({
+export const createMockMarkingResponse = (
+  overrides: Partial<MarkingResponse> = {}
+): MarkingResponse => ({
   score: 8,
   grade: '7',
   aosMet: ['AO1', 'AO2'],
   improvementSuggestions: [
     'Show more working steps',
-    'Explain your reasoning more clearly'
+    'Explain your reasoning more clearly',
   ],
   aiResponse: 'Good understanding shown. The answer is correct.',
   modelUsed: 'test-model',
@@ -80,13 +84,15 @@ export const createMockSupabaseClient = () => {
 /**
  * Mock Next.js request factory
  */
-export const createMockRequest = (options: {
-  method?: string;
-  body?: any;
-  headers?: Record<string, string>;
-  url?: string;
-  user?: User;
-} = {}): NextRequest => {
+export const createMockRequest = (
+  options: {
+    method?: string;
+    body?: any;
+    headers?: Record<string, string>;
+    url?: string;
+    user?: User;
+  } = {}
+): NextRequest => {
   const {
     method = 'GET',
     body = null,
@@ -138,7 +144,7 @@ export const createMockAIProvider = (name: string, overrides: any = {}) => ({
  */
 export const mockEnvVars = (vars: Record<string, string>) => {
   const originalEnv = process.env;
-  
+
   beforeEach(() => {
     process.env = { ...originalEnv, ...vars };
   });
@@ -178,18 +184,26 @@ export const expectAPIResponse = (response: any, expectedStatus: number) => {
  */
 export const mockConsole = () => {
   const originalConsole = console;
-  
+
   beforeEach(() => {
+    // eslint-disable-next-line no-console
     console.log = jest.fn();
+    // eslint-disable-next-line no-console
     console.error = jest.fn();
+    // eslint-disable-next-line no-console
     console.warn = jest.fn();
+    // eslint-disable-next-line no-console
     console.info = jest.fn();
   });
 
   afterEach(() => {
+    // eslint-disable-next-line no-console
     console.log = originalConsole.log;
+    // eslint-disable-next-line no-console
     console.error = originalConsole.error;
+    // eslint-disable-next-line no-console
     console.warn = originalConsole.warn;
+    // eslint-disable-next-line no-console
     console.info = originalConsole.info;
   });
 };

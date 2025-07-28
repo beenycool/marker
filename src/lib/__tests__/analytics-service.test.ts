@@ -1,8 +1,8 @@
 import { AnalyticsService } from '../analytics';
-import { 
-  createMockUser, 
+import {
+  createMockUser,
   createMockSupabaseClient,
-  mockConsole
+  mockConsole,
 } from './test-utils';
 
 jest.mock('@/lib/supabase', () => ({
@@ -30,10 +30,10 @@ describe('AnalyticsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockSupabase = createMockSupabaseClient();
     mockUser = createMockUser();
-    
+
     mockGetSupabase.mockResolvedValue(mockSupabase as any);
     analyticsService = new AnalyticsService();
   });
@@ -78,9 +78,9 @@ describe('AnalyticsService', () => {
       };
 
       mockSupabase.from.mockImplementation(() => ({
-        insert: jest.fn().mockResolvedValue({ 
-          data: null, 
-          error: { message: 'Database error' } 
+        insert: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'Database error' },
         }),
       }));
 
@@ -109,8 +109,8 @@ describe('AnalyticsService', () => {
         totalSubmissions: 10,
         averageScore: 82.5,
         subjectBreakdown: {
-          'Mathematics': 6,
-          'English': 4,
+          Mathematics: 6,
+          English: 4,
         },
         recentActivity: [
           { date: '2024-01-01', count: 2 },
@@ -132,13 +132,13 @@ describe('AnalyticsService', () => {
           return {
             ...baseQuery,
             // Mock different calls with different returns
-            select: jest.fn().mockImplementation((fields) => {
+            select: jest.fn().mockImplementation(fields => {
               if (fields === 'count') {
                 return {
                   ...baseQuery,
-                  single: jest.fn().mockResolvedValue({ 
-                    data: { count: mockStats.totalSubmissions }, 
-                    error: null 
+                  single: jest.fn().mockResolvedValue({
+                    data: { count: mockStats.totalSubmissions },
+                    error: null,
                   }),
                 };
               }
@@ -180,9 +180,9 @@ describe('AnalyticsService', () => {
       mockSupabase.from.mockImplementation(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ 
-          data: null, 
-          error: { message: 'No rows returned' } 
+        single: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'No rows returned' },
         }),
       }));
 
@@ -211,7 +211,10 @@ describe('AnalyticsService', () => {
         }),
       }));
 
-      const insights = await analyticsService.getSubjectInsights(mockUser.id, subject);
+      const insights = await analyticsService.getSubjectInsights(
+        mockUser.id,
+        subject
+      );
 
       expect(insights).toEqual(mockInsights);
       expect(mockSupabase.from).toHaveBeenCalledWith('submissions');
@@ -242,7 +245,10 @@ describe('AnalyticsService', () => {
         }),
       }));
 
-      const trends = await analyticsService.getPerformanceTrends(mockUser.id, 7);
+      const trends = await analyticsService.getPerformanceTrends(
+        mockUser.id,
+        7
+      );
 
       expect(trends).toEqual(mockTrendData);
       expect(mockSupabase.from).toHaveBeenCalledWith('analytics');

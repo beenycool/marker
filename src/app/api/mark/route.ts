@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 import { getCurrentUser, checkUsageLimit, incrementUsage } from '@/lib/auth';
 import { aiRouter } from '@/lib/ai/router';
 import { MarkingRequest } from '@/types';
@@ -41,13 +41,13 @@ const markingRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(2, 15);
   const startTime = Date.now();
-  
+
   logger.logAPIEvent({
     sessionId: requestId,
     endpoint: '/api/mark',
     method: 'POST',
     statusCode: 0, // Will be updated later
-    responseTimeMs: 0 // Will be updated later
+    responseTimeMs: 0, // Will be updated later
   });
 
   try {
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save submission to database
-    const client = await db;
+    const client = await getDb();
     const dbStartTime = Date.now();
     const { data: submission, error: submissionError } = await client
       .from('submissions')
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
       })
       .select('id, created_at')
       .single();
-    
+
     const dbEndTime = Date.now();
     logger.logDatabaseEvent({
       userId: user.id,
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
       operation: 'write',
       table: 'submissions',
       queryTimeMs: dbEndTime - dbStartTime,
-      success: !submissionError
+      success: !submissionError,
     });
 
     if (submissionError || !submission) {
@@ -282,11 +282,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Track submission creation event
-    trackSubmissionCreated({
-      userId: user.id,
-      submissionId: submission.id,
-      subject: markingRequest.subject || null,
-    });
+    trackSubmissionCreated();
 
     // Save feedback to database
     const feedbackDbStartTime = Date.now();
@@ -305,7 +301,7 @@ export async function POST(request: NextRequest) {
       })
       .select('*')
       .single();
-    
+
     const feedbackDbEndTime = Date.now();
     logger.logDatabaseEvent({
       userId: user.id,
@@ -313,7 +309,7 @@ export async function POST(request: NextRequest) {
       operation: 'write',
       table: 'feedback',
       queryTimeMs: feedbackDbEndTime - feedbackDbStartTime,
-      success: !feedbackError
+      success: !feedbackError,
     });
 
     if (feedbackError || !feedback) {
@@ -363,7 +359,7 @@ export async function POST(request: NextRequest) {
       endpoint: '/api/mark',
       method: 'POST',
       statusCode: 200,
-      responseTimeMs: totalResponseTime
+      responseTimeMs: totalResponseTime,
     });
 
     // Return success response

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { goldenDataset } from '@/lib/ai/golden-dataset';
-import { enhancedAIRouter } from '@/lib/ai/enhanced-router';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
-    
+
     const { searchParams } = new URL(request.url);
     const subject = searchParams.get('subject');
     const difficulty = searchParams.get('difficulty');
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (limit) filters.limit = parseInt(limit);
 
     const testCases = await goldenDataset.getTestCases(filters);
-    
+
     return NextResponse.json({
       testCases,
       total: testCases.length,

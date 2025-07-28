@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  CheckCircleIcon, 
-  ExclamationTriangleIcon, 
-  XCircleIcon 
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
+import { logger } from '@/lib/logger';
 
 interface HealthCheck {
   name: string;
@@ -28,7 +29,7 @@ export function SystemHealth() {
           setHealthChecks(data.checks);
         }
       } catch (error) {
-        console.error('Failed to fetch health status:', error);
+        logger.error('Failed to fetch health status', error);
       } finally {
         setIsLoading(false);
       }
@@ -64,7 +65,9 @@ export function SystemHealth() {
   if (isLoading) {
     return (
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">System Health</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          System Health
+        </h3>
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="animate-pulse">
@@ -86,14 +89,21 @@ export function SystemHealth() {
             {getStatusIcon(check.status)}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-900">{check.name}</p>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(check.status)}`}>
+                <p className="text-sm font-medium text-gray-900">
+                  {check.name}
+                </p>
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(check.status)}`}
+                >
                   {check.status}
                 </span>
               </div>
               <p className="text-sm text-gray-500">{check.message}</p>
               <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
-                <span>Last checked: {new Date(check.lastChecked).toLocaleTimeString()}</span>
+                <span>
+                  Last checked:{' '}
+                  {new Date(check.lastChecked).toLocaleTimeString()}
+                </span>
                 {check.responseTime && (
                   <span>Response: {check.responseTime}ms</span>
                 )}
@@ -102,9 +112,9 @@ export function SystemHealth() {
           </div>
         ))}
       </div>
-      
+
       <div className="mt-6 pt-4 border-t border-gray-200">
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="text-sm text-blue-600 hover:text-blue-700 font-medium"
         >

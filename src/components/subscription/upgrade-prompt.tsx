@@ -35,12 +35,12 @@ export function UpgradePrompt({
 
   useEffect(() => {
     // Remove Clerk dependency - track without user ID
-    trackUpgradePromptShown('anonymous', context);
-  }, [context]);
+    trackUpgradePromptShown();
+  }, []);
 
   const handleUpgrade = () => {
     // Remove Clerk dependency - track without user ID
-    trackUpgradePromptClicked('anonymous', context);
+    trackUpgradePromptClicked();
     router.push('/pricing');
   };
 

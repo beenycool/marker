@@ -40,7 +40,7 @@ You are marking a student's response to help them understand their performance l
 - Accurate according to current GCSE standards and specifications (2024-2025)
 - Constructive and developmental in nature, encouraging growth mindset
 - Specific and actionable for student improvement with clear next steps
-- Encouraging while maintaining honest assessment standards`
+- Encouraging while maintaining honest assessment standards`,
     });
 
     this.templates.set('question-context', {
@@ -53,7 +53,7 @@ You are marking a student's response to help them understand their performance l
 STUDENT ANSWER:
 {{answer}}
 
-{{markSchemeSection}}`
+{{markSchemeSection}}`,
     });
 
     this.templates.set('marking-criteria', {
@@ -69,7 +69,7 @@ STUDENT ANSWER:
 - Current specification year: 2024-2025 academic cycle
 
 ASSESSMENT OBJECTIVES TO EVALUATE:
-{{assessmentObjectives}}`
+{{assessmentObjectives}}`,
     });
 
     this.templates.set('feedback-structure', {
@@ -87,7 +87,7 @@ IMPROVEMENT SUGGESTIONS CRITERIA:
 - Each suggestion must include:
   * WHAT to do (specific technique/skill)
   * HOW to do it (concrete example from their answer)
-  * WHY it matters (link to mark scheme/AOs)`
+  * WHY it matters (link to mark scheme/AOs)`,
     });
 
     this.templates.set('response-format', {
@@ -106,7 +106,7 @@ IMPROVEMENT SUGGESTIONS CRITERIA:
   ],
   "detailedFeedback": "Comprehensive feedback (200-400 words) following the structure template",
   "confidenceScore": [numerical score from 1-10 representing confidence in the marking accuracy]
-}`
+}`,
     });
 
     this.templates.set('quality-standards', {
@@ -124,11 +124,14 @@ CONFIDENCE SCORE GUIDELINES:
 - 7-8: Good answer, mark scheme available, some interpretation needed
 - 5-6: Ambiguous answer OR unusual question OR missing mark scheme
 - 3-4: Very unclear answer, significant gaps, heavy interpretation
-- 1-2: Cannot properly assess due to major issues`
+- 1-2: Cannot properly assess due to major issues`,
     });
   }
 
-  public assemblePrompt(templateIds: string[], variables: PromptVariables): string {
+  public assemblePrompt(
+    templateIds: string[],
+    variables: PromptVariables
+  ): string {
     const sections = templateIds.map(id => {
       const template = this.templates.get(id);
       if (!template) {
@@ -140,18 +143,21 @@ CONFIDENCE SCORE GUIDELINES:
     return sections.join('\n\n');
   }
 
-  private interpolateTemplate(content: string, variables: PromptVariables): string {
+  private interpolateTemplate(
+    content: string,
+    variables: PromptVariables
+  ): string {
     let result = content;
-    
+
     // Handle mark scheme section conditionally
-    const markSchemeSection = variables.markScheme 
-      ? `OFFICIAL MARK SCHEME:\n${variables.markScheme}\n` 
+    const markSchemeSection = variables.markScheme
+      ? `OFFICIAL MARK SCHEME:\n${variables.markScheme}\n`
       : '';
-    
+
     // Replace all variables
     const replacements = {
       ...variables,
-      markSchemeSection
+      markSchemeSection,
     };
 
     Object.entries(replacements).forEach(([key, value]) => {

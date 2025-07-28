@@ -80,7 +80,7 @@ export async function hasPermission(permission: string): Promise<boolean> {
 
   // Admin has all permissions, moderator has limited permissions
   if (adminUser.role === 'admin') return true;
-  
+
   // Define moderator permissions
   const moderatorPermissions = [
     'view_users',

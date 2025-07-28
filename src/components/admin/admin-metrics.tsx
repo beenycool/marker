@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  UsersIcon, 
-  DocumentIcon, 
-  CurrencyDollarIcon, 
+import {
+  UsersIcon,
+  DocumentIcon,
+  CurrencyDollarIcon,
   ChartBarIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
+import { logger } from '@/lib/logger';
 
 interface Metrics {
   totalUsers: number;
@@ -35,7 +36,7 @@ export function AdminMetrics() {
           setMetrics(data);
         }
       } catch (error) {
-        console.error('Failed to fetch metrics:', error);
+        logger.error('Failed to fetch metrics', error);
       } finally {
         setIsLoading(false);
       }
@@ -122,7 +123,7 @@ export function AdminMetrics() {
     },
     {
       title: 'Profit Margin',
-      value: `${(((metrics.monthlyRevenue * 0.85) - metrics.totalCost) / (metrics.monthlyRevenue * 0.85) * 100).toFixed(1)}%`,
+      value: `${(((metrics.monthlyRevenue * 0.85 - metrics.totalCost) / (metrics.monthlyRevenue * 0.85)) * 100).toFixed(1)}%`,
       change: 'After fees',
       icon: ChartBarIcon,
       color: 'indigo',
@@ -148,11 +149,15 @@ export function AdminMetrics() {
         <div key={index} className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{metric.title}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {metric.title}
+              </p>
               <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
               <p className="text-sm text-gray-500">{metric.change}</p>
             </div>
-            <div className={`p-3 rounded-full ${getColorClasses(metric.color)}`}>
+            <div
+              className={`p-3 rounded-full ${getColorClasses(metric.color)}`}
+            >
               <metric.icon className="h-6 w-6" />
             </div>
           </div>

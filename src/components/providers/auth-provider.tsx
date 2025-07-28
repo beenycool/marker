@@ -49,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const initAuth = async () => {
       try {
         // Set up auth state listener
-        unsubscribe = await onAuthStateChange((user) => {
+        unsubscribe = await onAuthStateChange(user => {
           setUser(user);
           setLoading(false);
         });
@@ -57,11 +57,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Get initial session
         const initialSession = await getCurrentSession();
         setSession(initialSession);
-        
+
         if (!initialSession) {
           setLoading(false);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Auth initialization error:', error);
         setLoading(false);
       }
@@ -100,6 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Also call our API to clear server-side cookies
       await fetch('/api/auth/sign-out', { method: 'POST' });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error signing out:', error);
     }
   };

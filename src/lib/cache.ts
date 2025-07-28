@@ -58,7 +58,9 @@ class CacheService {
       markScheme: request.markScheme,
     };
 
-    const hash = createHash('sha256').update(JSON.stringify(cacheData)).digest('hex');
+    const hash = createHash('sha256')
+      .update(JSON.stringify(cacheData))
+      .digest('hex');
     return `marking:${hash}`;
   }
 

@@ -51,9 +51,17 @@ export default function Terms() {
             <li>Submit inappropriate, harmful, or non-educational content</li>
             <li>Share your account credentials with unauthorized users</li>
             <li>Exceed usage limits or attempt to circumvent rate limiting</li>
-            <li>Attempt to hack, disrupt, or gain unauthorized access to the service</li>
-            <li>Use the service in any way that violates applicable laws or regulations</li>
-            <li>Spam or abuse the service with excessive or automated requests</li>
+            <li>
+              Attempt to hack, disrupt, or gain unauthorized access to the
+              service
+            </li>
+            <li>
+              Use the service in any way that violates applicable laws or
+              regulations
+            </li>
+            <li>
+              Spam or abuse the service with excessive or automated requests
+            </li>
             <li>Upload malicious content, viruses, or harmful code</li>
           </ul>
         </section>
@@ -74,7 +82,9 @@ export default function Terms() {
             </h3>
             <ul className="list-disc pl-6 mb-4">
               <li>200 AI marks per day</li>
-              <li>Access to all AI models (Gemini, Kimi-v2, DeepSeek v3, Qwen Pro)</li>
+              <li>
+                Access to all AI models (Gemini, Kimi-v2, DeepSeek v3, Qwen Pro)
+              </li>
               <li>OCR handwriting recognition</li>
               <li>Advanced analytics and export features</li>
             </ul>
@@ -85,13 +95,16 @@ export default function Terms() {
           <h2 className="text-2xl font-semibold mb-4">AI Marking Disclaimer</h2>
           <p className="mb-4">
             AIMARKER provides AI-generated feedback and scoring as an
-            educational tool. The AI-generated feedback is for educational guidance only and should not be considered a substitute for a teacher's assessment. Accuracy is not guaranteed.
+            educational tool. The AI-generated feedback is for educational
+            guidance only and should not be considered a substitute for a
+            teacher's assessment. Accuracy is not guaranteed.
           </p>
           <p className="mb-4">
-            While we strive for accuracy, AI marking should be
-            used as a supplement to, not a replacement for, human teacher
-            assessment. Results may vary and should be verified by qualified
-            educators for official grading purposes. We are not responsible for any academic decisions made based solely on AI-generated feedback.
+            While we strive for accuracy, AI marking should be used as a
+            supplement to, not a replacement for, human teacher assessment.
+            Results may vary and should be verified by qualified educators for
+            official grading purposes. We are not responsible for any academic
+            decisions made based solely on AI-generated feedback.
           </p>
         </section>
 
@@ -168,22 +181,28 @@ export default function Terms() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Account Termination and Enforcement</h2>
+          <h2 className="text-2xl font-semibold mb-4">
+            Account Termination and Enforcement
+          </h2>
           <p className="mb-4">
             We reserve the right to terminate accounts that violate these terms,
-            exceed usage limits, or engage in harmful behavior. This includes but is not limited to:
+            exceed usage limits, or engage in harmful behavior. This includes
+            but is not limited to:
           </p>
           <ul className="list-disc pl-6 mb-4">
             <li>Submitting harmful, offensive, or inappropriate content</li>
             <li>Attempting to hack or disrupt the service</li>
             <li>Circumventing usage limits or rate limiting</li>
             <li>Sharing account credentials with unauthorized users</li>
-            <li>Using the service for commercial purposes without authorization</li>
+            <li>
+              Using the service for commercial purposes without authorization
+            </li>
             <li>Violating academic integrity policies</li>
           </ul>
           <p className="mb-4">
-            Account termination may be immediate and without prior notice for serious violations. Users may cancel
-            their accounts at any time through the account settings.
+            Account termination may be immediate and without prior notice for
+            serious violations. Users may cancel their accounts at any time
+            through the account settings.
           </p>
         </section>
 

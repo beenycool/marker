@@ -2,11 +2,13 @@
 // This file is maintained for backward compatibility
 
 import { withAuth as withAuthentication } from './auth/middleware';
+import { NextRequest, NextResponse } from 'next/server';
+import type { User } from '@/types';
 
 export const withAuth = withAuthentication;
 
-    return handler(authenticatedReq);
-  };
+interface AuthenticatedRequest extends NextRequest {
+  user?: User;
 }
 
 export function requireAuth(
@@ -19,6 +21,8 @@ export function requirePro(
   handler: (req: AuthenticatedRequest) => Promise<NextResponse>
 ) {
   return async (req: NextRequest): Promise<NextResponse> => {
+    // Dynamic import to avoid bundling server code in client
+    const { getCurrentUser } = await import('./auth/server');
     const user = await getCurrentUser();
 
     if (!user) {

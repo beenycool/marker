@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon, 
-  ChartBarIcon,
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
-  BeakerIcon
+  BeakerIcon,
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
@@ -52,7 +51,7 @@ export function PromptManagement() {
     content: '',
     description: '',
     subject: '',
-    rollout_percentage: 0
+    rollout_percentage: 0,
   });
 
   useEffect(() => {
@@ -77,25 +76,27 @@ export function PromptManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      const url = editingPrompt 
+      const url = editingPrompt
         ? `/api/admin/prompts?id=${editingPrompt.id}`
         : '/api/admin/prompts';
-      
+
       const method = editingPrompt ? 'PATCH' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          isActive: false // New prompts start inactive
-        })
+          isActive: false, // New prompts start inactive
+        }),
       });
 
       if (response.ok) {
-        toast.success(`Prompt ${editingPrompt ? 'updated' : 'created'} successfully`);
+        toast.success(
+          `Prompt ${editingPrompt ? 'updated' : 'created'} successfully`
+        );
         setShowForm(false);
         setEditingPrompt(null);
         resetForm();
@@ -114,10 +115,10 @@ export function PromptManagement() {
       const response = await fetch(`/api/admin/prompts?id=${prompt.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           isActive: true,
-          rollout_percentage: 100 
-        })
+          rollout_percentage: 100,
+        }),
       });
 
       if (response.ok) {
@@ -136,10 +137,10 @@ export function PromptManagement() {
       const response = await fetch(`/api/admin/prompts?id=${prompt.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           isActive: false,
-          rollout_percentage: 0 
-        })
+          rollout_percentage: 0,
+        }),
       });
 
       if (response.ok) {
@@ -158,7 +159,7 @@ export function PromptManagement() {
 
     try {
       const response = await fetch(`/api/admin/prompts?id=${prompt.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
 
       if (response.ok) {
@@ -180,7 +181,7 @@ export function PromptManagement() {
       content: prompt.content,
       description: prompt.description || '',
       subject: prompt.subject || '',
-      rollout_percentage: prompt.rollout_percentage
+      rollout_percentage: prompt.rollout_percentage,
     });
     setShowForm(true);
   };
@@ -192,7 +193,7 @@ export function PromptManagement() {
       content: '',
       description: '',
       subject: '',
-      rollout_percentage: 0
+      rollout_percentage: 0,
     });
   };
 
@@ -201,11 +202,13 @@ export function PromptManagement() {
       const response = await fetch('/api/admin/golden-dataset/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptId: prompt.id })
+        body: JSON.stringify({ promptId: prompt.id }),
       });
 
       if (response.ok) {
-        toast.success('Prompt test started. Results will be available shortly.');
+        toast.success(
+          'Prompt test started. Results will be available shortly.'
+        );
       } else {
         toast.error('Failed to start prompt test');
       }
@@ -226,8 +229,12 @@ export function PromptManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">AI Prompt Management</h2>
-          <p className="text-gray-600">Manage and A/B test AI prompts for better performance</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            AI Prompt Management
+          </h2>
+          <p className="text-gray-600">
+            Manage and A/B test AI prompts for better performance
+          </p>
         </div>
         <button
           onClick={() => {
@@ -257,7 +264,9 @@ export function PromptManagement() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="e.g., gcse-english-marking"
                 />
@@ -270,7 +279,9 @@ export function PromptManagement() {
                   type="text"
                   required
                   value={formData.version}
-                  onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, version: e.target.value })
+                  }
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="e.g., 2.1.0"
                 />
@@ -285,7 +296,9 @@ export function PromptManagement() {
                 <input
                   type="text"
                   value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  onChange={e =>
+                    setFormData({ ...formData, subject: e.target.value })
+                  }
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="e.g., English Literature"
                 />
@@ -299,7 +312,12 @@ export function PromptManagement() {
                   min="0"
                   max="100"
                   value={formData.rollout_percentage}
-                  onChange={(e) => setFormData({ ...formData, rollout_percentage: parseInt(e.target.value) || 0 })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      rollout_percentage: parseInt(e.target.value) || 0,
+                    })
+                  }
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 />
               </div>
@@ -312,7 +330,9 @@ export function PromptManagement() {
               <input
                 type="text"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={e =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Brief description of this prompt version"
               />
@@ -326,7 +346,9 @@ export function PromptManagement() {
                 required
                 rows={8}
                 value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                onChange={e =>
+                  setFormData({ ...formData, content: e.target.value })
+                }
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Enter the complete prompt template..."
               />
@@ -375,7 +397,7 @@ export function PromptManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {prompts.map((prompt) => (
+              {prompts.map(prompt => (
                 <tr key={prompt.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div>
@@ -400,7 +422,9 @@ export function PromptManagement() {
                       ) : (
                         <>
                           <XCircleIcon className="h-5 w-5 text-gray-400" />
-                          <span className="text-sm text-gray-500">Inactive</span>
+                          <span className="text-sm text-gray-500">
+                            Inactive
+                          </span>
                         </>
                       )}
                     </div>
@@ -408,9 +432,21 @@ export function PromptManagement() {
                   <td className="px-6 py-4">
                     {prompt.performance_metrics ? (
                       <div className="text-sm text-gray-900">
-                        <div>Uses: {prompt.performance_metrics.total_uses || 0}</div>
-                        <div>Avg Score: {prompt.performance_metrics.avg_score?.toFixed(1) || 'N/A'}</div>
-                        <div>Success: {prompt.performance_metrics.success_rate?.toFixed(1) || 'N/A'}%</div>
+                        <div>
+                          Uses: {prompt.performance_metrics.total_uses || 0}
+                        </div>
+                        <div>
+                          Avg Score:{' '}
+                          {prompt.performance_metrics.avg_score?.toFixed(1) ||
+                            'N/A'}
+                        </div>
+                        <div>
+                          Success:{' '}
+                          {prompt.performance_metrics.success_rate?.toFixed(
+                            1
+                          ) || 'N/A'}
+                          %
+                        </div>
                       </div>
                     ) : (
                       <span className="text-sm text-gray-500">No data</span>
