@@ -115,6 +115,7 @@ wrangler.toml.local
 *.csr
 *.p12
 *.pfx
+.mcp.json
 
 # Logs
 logs/
