@@ -82,9 +82,18 @@ prisma/migrations/**/migration.sql
 .wrangler/
 wrangler.toml.local
 
-# OpenNext
+# OpenNext - Build artifacts and cache files
 .open-next/
 **/next-env.mjs
+.open-next/**
+.open-next/assets/**
+.open-next/cache/**
+.open-next/server-functions/**
+.open-next/cloudflare/**
+.open-next/dynamodb-provider/**
+.open-next/middleware/**
+.open-next/worker.js
+.open-next/.build/
 
 # Local database files
 *.db
@@ -124,3 +133,12 @@ logs/
 # Temporary folders
 tmp/
 temp/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# OCR Service
+ocr-service/__pycache__/
+ocr-service/*.pyc
+ocr-service/pytorch_update.log
