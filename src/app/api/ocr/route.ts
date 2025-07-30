@@ -98,7 +98,7 @@ async function callOCRService(
       method: 'POST',
       body: formData,
       headers: {
-        'Authorization': `Bearer ${ocrApiKey}`,
+        'X-API-Key': ocrApiKey,
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate, br',
         'User-Agent': 'AIMARKER-CloudflareWorker/1.0'

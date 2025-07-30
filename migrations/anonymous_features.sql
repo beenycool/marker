@@ -47,22 +47,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Table for GDPR-compliant summer email reminders
-CREATE TABLE IF NOT EXISTS summer_email_reminders (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    consent_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    purpose VARCHAR(100) NOT NULL DEFAULT 'school_year_pricing_reminder',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    sent BOOLEAN DEFAULT FALSE,
-    sent_at TIMESTAMP WITH TIME ZONE,
-    unsubscribed BOOLEAN DEFAULT FALSE,
-    unsubscribed_at TIMESTAMP WITH TIME ZONE
-);
 
--- Index for email lookups
-CREATE INDEX IF NOT EXISTS idx_summer_email_reminders_email ON summer_email_reminders(email);
-CREATE INDEX IF NOT EXISTS idx_summer_email_reminders_sent ON summer_email_reminders(sent) WHERE sent = FALSE;
 
 -- Table for shareable results (no personal data)
 CREATE TABLE IF NOT EXISTS shared_results (
@@ -107,7 +92,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Enable Row Level Security (RLS) for privacy
-ALTER TABLE summer_email_reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE anonymous_counters ENABLE ROW LEVEL SECURITY;
 
@@ -123,10 +107,6 @@ CREATE POLICY "Allow public insert on shared_results" ON shared_results
 CREATE POLICY "Allow public access on anonymous_counters" ON anonymous_counters
     FOR ALL USING (true);
 
--- Policy: Email reminders are insert-only for privacy
-CREATE POLICY "Allow public insert on summer_email_reminders" ON summer_email_reminders
-    FOR INSERT WITH CHECK (true);
 
-COMMENT ON TABLE summer_email_reminders IS 'GDPR-compliant email collection for one-time school year pricing reminder';
 COMMENT ON TABLE shared_results IS 'Anonymous shareable marking results with automatic expiry';
 COMMENT ON TABLE anonymous_counters IS 'IP-based daily rate limiting without storing personal data';

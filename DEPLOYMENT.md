@@ -76,3 +76,23 @@ rm -rf ~/aimarker/data/*
 | Main App | 8003 | Web interface |
 
 That's it! Your AIMARKER app will be running with full functionality.
+## OCR Service Security Setup
+
+1. Generate a strong API key for the OCR service:
+   ```bash
+   openssl rand -base64 32
+   ```
+
+2. Set the API key as an environment variable on your OCR VM:
+   ```bash
+   echo "export OCR_SERVICE_API_KEY='your-generated-key'" >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+3. Set the same API key as a Cloudflare secret:
+   ```bash
+   npx wrangler secret put OCR_SERVICE_API_KEY
+   # Paste your generated key when prompted
+   ```
+
+4. Restart your OCR service to apply the environment variable
