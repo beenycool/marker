@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, MessageSquare, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,8 @@ interface AIFeedbackWidgetProps {
   submissionId: string;
   feedbackId: string;
   promptVersion?: string;
+  modelUsed?: string;
+  aiResponse?: string;
   onFeedbackSubmitted?: (feedback: any) => void;
 }
 
@@ -18,6 +20,8 @@ export function AIFeedbackWidget({
   submissionId,
   feedbackId,
   promptVersion,
+  modelUsed,
+  aiResponse,
   onFeedbackSubmitted,
 }: AIFeedbackWidgetProps) {
   const [rating, setRating] = useState<'helpful' | 'not_helpful' | null>(null);
@@ -25,6 +29,8 @@ export function AIFeedbackWidget({
   const [showComment, setShowComment] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isReported, setIsReported] = useState(false);
+  const [reportingIssue, setReportingIssue] = useState(false);
   const { toast } = useToast();
 
   const handleRating = async (newRating: 'helpful' | 'not_helpful') => {
@@ -94,6 +100,49 @@ export function AIFeedbackWidget({
 
   const handleCommentSubmit = async () => {
     await submitFeedback(rating!, comment);
+  };
+
+  const handleReportPoorFeedback = async () => {
+    if (!aiResponse || isReported || reportingIssue) return;
+
+    setReportingIssue(true);
+
+    try {
+      const response = await fetch('/api/feedback/report-issue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          promptVersion,
+          modelUsed,
+          failedResponseText: aiResponse,
+          metadata: {
+            timestamp: new Date().toISOString(),
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to report issue');
+      }
+
+      setIsReported(true);
+
+      toast({
+        title: 'Thank you for your feedback!',
+        description: 'Your report helps us improve our AI marking system.',
+      });
+    } catch (error) {
+      console.error('Failed to report issue:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to report issue. Please try again.',
+      });
+    } finally {
+      setReportingIssue(false);
+    }
   };
 
   if (submitted) {
@@ -178,6 +227,29 @@ export function AIFeedbackWidget({
                 </Button>
               </div>
             </>
+          )}
+          
+          {/* Report Poor Feedback Section */}
+          {aiResponse && !submitted && (
+            <div className="pt-3 border-t border-white/10">
+              {!isReported ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReportPoorFeedback}
+                  disabled={reportingIssue}
+                  className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 w-full"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  {reportingIssue ? 'Reporting...' : 'Report Poor Feedback'}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 text-green-400 text-sm justify-center">
+                  <ThumbsUp className="h-4 w-4" />
+                  <span>Thank you for your feedback!</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </CardContent>

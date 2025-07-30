@@ -106,6 +106,11 @@ export default function Terms() {
             official grading purposes. We are not responsible for any academic
             decisions made based solely on AI-generated feedback.
           </p>
+          <p className="mb-4">
+            Our service utilizes multiple AI providers (OpenAI, Google Gemini, Anthropic Claude, and others via OpenRouter) 
+            to provide diverse marking perspectives. We continuously validate our AI accuracy through golden test datasets 
+            and user feedback, but variations in AI responses are expected and normal.
+          </p>
         </section>
 
         <section className="mb-8">
@@ -141,20 +146,39 @@ export default function Terms() {
             AIMARKER collects and stores certain data to provide our services,
             including user accounts, submitted content, marking results, and
             usage analytics. All data is stored securely with encryption and
-            processed through secure third-party services. See our Privacy
-            Policy for complete details on data collection, storage, and usage.
+            processed through secure third-party services.
+          </p>
+          <p className="mb-4">
+            <strong>Anonymous Users:</strong> The service supports anonymous usage with rate limiting. 
+            Anonymous submissions are stored without personal identifiers but may be used to improve our AI models.
+          </p>
+          <p className="mb-4">
+            <strong>Data Processing:</strong> Your academic content may be processed by multiple AI providers 
+            for marking purposes. We implement cost tracking, performance monitoring, and quality assurance 
+            measures that may involve storing AI responses, usage metrics, and system logs.
+          </p>
+          <p className="mb-4">
+            See our Privacy Policy for complete details on data collection, storage, retention periods, and your rights.
           </p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Third-Party Services</h2>
           <p className="mb-4">
-            AIMARKER integrates with third-party services including Stripe
-            (payments), Supabase (database), AI providers (Google Gemini,
-            OpenRouter), Sentry (error tracking), PostHog (analytics), Upstash
-            Redis (rate limiting), EasyOCR (handwriting recognition), and
-            Datadog (monitoring). Use of these services is subject to their
-            respective terms of service.
+            AIMARKER integrates with third-party services including:
+          </p>
+          <ul className="list-disc pl-6 mb-4">
+            <li><strong>Payment Processing:</strong> Stripe (secure payment handling)</li>
+            <li><strong>Database & Auth:</strong> Supabase (data storage and user authentication)</li>
+            <li><strong>AI Providers:</strong> OpenAI, Google Gemini, Anthropic Claude, and additional models via OpenRouter</li>
+            <li><strong>Monitoring:</strong> Sentry (error tracking), Datadog (system monitoring)</li>
+            <li><strong>Analytics:</strong> PostHog (privacy-focused usage analytics)</li>
+            <li><strong>Performance:</strong> Upstash Redis (rate limiting and caching)</li>
+            <li><strong>OCR Processing:</strong> EasyOCR (handwriting recognition)</li>
+          </ul>
+          <p className="mb-4">
+            Use of these services is subject to their respective terms of service and privacy policies. 
+            We select providers that maintain high security and privacy standards compatible with educational use.
           </p>
         </section>
 

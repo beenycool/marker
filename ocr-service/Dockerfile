@@ -24,6 +24,11 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy and run tests to verify the update
+COPY test_pytorch_update.py .
+RUN python test_pytorch_update.py
+RUN rm test_pytorch_update.py
+
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash ocr && \
     chown -R ocr:ocr /app

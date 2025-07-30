@@ -21,8 +21,20 @@ import {
   Copy,
   Share2,
   ThumbsUp,
+  HelpCircle,
+  Loader2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface FeedbackDisplayProps {
   feedback: {
@@ -41,6 +53,8 @@ interface FeedbackDisplayProps {
       modelUsed: string;
       confidenceScore?: number;
     };
+    originalAnswer?: string;
+    originalQuestion?: string;
     usage: {
       used: number;
       limit: number;
@@ -52,6 +66,9 @@ interface FeedbackDisplayProps {
 export function FeedbackDisplay({ feedback }: FeedbackDisplayProps) {
   const { feedback: feedbackData } = feedback;
   const percentage = (feedbackData.score / 20) * 100; // Assuming 20 marks default
+  const [clarifications, setClarifications] = useState<{ [key: number]: string }>({});
+  const [loadingClarifications, setLoadingClarifications] = useState<{ [key: number]: boolean }>({});
+  const { toast } = useToast();
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
@@ -89,6 +106,61 @@ export function FeedbackDisplay({ feedback }: FeedbackDisplayProps) {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+  };
+
+  const getClarification = async (suggestionIndex: number, suggestion: string) => {
+    if (clarifications[suggestionIndex] || loadingClarifications[suggestionIndex]) {
+      return;
+    }
+
+    if (!feedback.originalAnswer) {
+      toast({
+        title: 'Unable to clarify',
+        description: 'Original answer not available for clarification',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoadingClarifications(prev => ({ ...prev, [suggestionIndex]: true }));
+
+    try {
+      const response = await fetch('/api/feedback/clarify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          originalAnswer: feedback.originalAnswer,
+          improvementSuggestion: suggestion,
+          promptVersion: 'brutal-examiner-v1.2',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get clarification');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setClarifications(prev => ({ 
+          ...prev, 
+          [suggestionIndex]: data.clarification 
+        }));
+      } else {
+        throw new Error(data.error || 'Failed to get clarification');
+      }
+    } catch (error) {
+      console.error('Clarification error:', error);
+      toast({
+        title: 'Clarification failed',
+        description: 'Unable to get additional explanation. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingClarifications(prev => ({ ...prev, [suggestionIndex]: false }));
+    }
   };
 
   return (
@@ -210,12 +282,63 @@ export function FeedbackDisplay({ feedback }: FeedbackDisplayProps) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="flex items-start gap-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20"
+                  className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20"
                 >
-                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                    {index + 1}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-300 text-sm mb-2">{suggestion}</p>
+                      
+                      <div className="flex items-center gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => getClarification(index, suggestion)}
+                              disabled={loadingClarifications[index]}
+                              className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 text-xs"
+                            >
+                              {loadingClarifications[index] ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  Getting explanation...
+                                </>
+                              ) : (
+                                <>
+                                  <HelpCircle className="h-3 w-3 mr-1" />
+                                  Explain further
+                                </>
+                              )}
+                            </Button>
+                          </DialogTrigger>
+                          {clarifications[index] && (
+                            <DialogContent className="bg-gray-900 border-gray-700">
+                              <DialogHeader>
+                                <DialogTitle className="text-white">
+                                  Detailed Explanation
+                                </DialogTitle>
+                                <DialogDescription className="text-gray-300">
+                                  Here's a more detailed explanation of this improvement suggestion
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="mt-4">
+                                <div className="bg-gray-800 p-4 rounded-lg">
+                                  <div className="prose prose-invert prose-sm max-w-none">
+                                    <div className="whitespace-pre-wrap text-gray-300 text-sm leading-relaxed">
+                                      {clarifications[index]}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          )}
+                        </Dialog>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-gray-300 text-sm">{suggestion}</p>
                 </motion.div>
               ))
             ) : (

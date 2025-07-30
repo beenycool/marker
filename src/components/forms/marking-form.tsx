@@ -81,6 +81,8 @@ export function MarkingForm() {
   const [isMarking, setIsMarking] = useState(false);
   const [isCoolingDown, setIsCoolingDown] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
+  const [originalAnswer, setOriginalAnswer] = useState<string>('');
+  const [originalQuestion, setOriginalQuestion] = useState<string>('');
   const markSubmission = useMarkSubmission();
   const { toast } = useToast();
 
@@ -101,6 +103,10 @@ export function MarkingForm() {
     try {
       // Optimistic update: show marking in progress state immediately
       setIsMarking(true);
+      
+      // Store original data for clarification feature
+      setOriginalAnswer(data.answer);
+      setOriginalQuestion(data.question);
 
       // Reset form immediately to allow new submissions
       form.reset();
@@ -117,6 +123,30 @@ export function MarkingForm() {
 
       // Update feedback when API call completes
       setFeedback(result);
+      
+      // Save simplified result to localStorage for local dashboard
+      const simplifiedResult = {
+        id: result.id || Date.now().toString(),
+        score: result.feedback.score,
+        grade: result.feedback.grade,
+        subject: data.subject || null,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Get existing history and add new result
+      const existingHistory = localStorage.getItem('aimarker_history');
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      history.push(simplifiedResult);
+      
+      // Keep only last 50 submissions to prevent localStorage bloat
+      const trimmedHistory = history.slice(-50);
+      localStorage.setItem('aimarker_history', JSON.stringify(trimmedHistory));
+      
+      // Dispatch custom event to notify other components of update
+      window.dispatchEvent(new CustomEvent('localHistoryUpdate', { 
+        detail: trimmedHistory 
+      }));
+      
       setIsMarking(false);
 
       // Start cooldown timer
@@ -371,7 +401,15 @@ export function MarkingForm() {
         </Card>
 
         {/* Feedback Display */}
-        {feedback && <FeedbackDisplay feedback={feedback} />}
+        {feedback && (
+          <FeedbackDisplay 
+            feedback={{
+              ...feedback,
+              originalAnswer,
+              originalQuestion
+            }} 
+          />
+        )}
         {isMarking && !feedback && (
           <Card className="bg-white/5 backdrop-blur-sm border-white/10">
             <CardHeader>

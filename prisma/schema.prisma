@@ -12,7 +12,7 @@ datasource db {
 
 model submissions {
   id         String   @id @default(uuid())
-  user_id    String
+  user_id    String?
   question   String
   subject    String?
   exam_board String?

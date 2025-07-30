@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/lib/db';
-import { getCurrentUser, checkUsageLimit, incrementUsage } from '@/lib/auth';
+import { rateLimit } from '@/lib/rate-limit';
 import { aiRouter } from '@/lib/ai/router';
 import { MarkingRequest } from '@/types';
 import {
@@ -51,22 +51,14 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    // Get the authenticated user
-    const user = await getCurrentUser();
-    if (!user) {
-      logger.warn('Authentication failed for POST /api/mark', { requestId });
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          requestId,
-        },
-        { status: 401 }
-      );
+    // Check anonymous rate limiting
+    const rateLimitResponse = await rateLimit(request);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
-    logger.info(`User ${user.id} authenticated for marking request`, {
+    logger.info('Anonymous user request for marking', {
       requestId,
-      userId: user.id,
     });
 
     // Parse and validate the request body
@@ -93,7 +85,6 @@ export async function POST(request: NextRequest) {
     if (!validatedData.success) {
       logger.warn('Validation failed for marking request', {
         requestId,
-        userId: user.id,
         errors: validatedData.error.errors,
       });
       return NextResponse.json(
@@ -108,35 +99,11 @@ export async function POST(request: NextRequest) {
 
     logger.info('Request body validated successfully', {
       requestId,
-      userId: user.id,
       questionLength: validatedData.data.question.length,
       answerLength: validatedData.data.answer.length,
       subject: validatedData.data.subject,
       examBoard: validatedData.data.examBoard,
     });
-
-    // Check usage limits
-    const usageCheck = await checkUsageLimit(user.id);
-    if (!usageCheck.canUse) {
-      logger.warn(`User ${user.id} has reached daily limit`, {
-        requestId,
-        userId: user.id,
-        usedToday: usageCheck.usedToday,
-        limit: usageCheck.limit,
-      });
-      return NextResponse.json(
-        {
-          error: 'Daily limit reached',
-          usage: {
-            used: usageCheck.usedToday,
-            limit: usageCheck.limit,
-            remaining: 0,
-          },
-          requestId,
-        },
-        { status: 429 }
-      );
-    }
 
     // Prepare the marking request
     const markingRequest: MarkingRequest = {
@@ -148,9 +115,8 @@ export async function POST(request: NextRequest) {
       examBoard: validatedData.data.examBoard,
     };
 
-    logger.info(`Processing marking request for user ${user.id}`, {
+    logger.info(`Processing marking request for anonymous user`, {
       requestId,
-      userId: user.id,
     });
 
     // Get AI marking response
@@ -158,16 +124,15 @@ export async function POST(request: NextRequest) {
     try {
       markingResponse = await aiRouter.mark(
         markingRequest,
-        user.subscriptionTier,
+        'FREE', // Anonymous users get free tier
         validatedData.data.preferredProvider,
-        user.id,
+        undefined, // No user ID for anonymous
         requestId
       );
       logger.info(
-        `Successfully received AI marking response for user ${user.id}`,
+        `Successfully received AI marking response for anonymous user`,
         {
           requestId,
-          userId: user.id,
           modelUsed: markingResponse.modelUsed,
           score: markingResponse.score,
         }
@@ -175,7 +140,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       logger.error('AI marking failed', {
         requestId,
-        userId: user.id,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
       });
@@ -202,7 +166,6 @@ export async function POST(request: NextRequest) {
           `Enhancing response with grade boundaries for subject ${validatedData.data.subjectCode}`,
           {
             requestId,
-            userId: user.id,
             subjectCode: validatedData.data.subjectCode,
           }
         );
@@ -213,13 +176,12 @@ export async function POST(request: NextRequest) {
           );
         logger.info(`Successfully enhanced response with grade boundaries`, {
           requestId,
-          userId: user.id,
+          
           grade: enhancedResponse.grade,
         });
       } catch (error) {
         logger.warn('Failed to enhance with grade boundaries', {
           requestId,
-          userId: user.id,
           error: error instanceof Error ? error.message : 'Unknown error',
           subjectCode: validatedData.data.subjectCode,
         });
@@ -233,7 +195,7 @@ export async function POST(request: NextRequest) {
     const { data: submission, error: submissionError } = await client
       .from('submissions')
       .insert({
-        user_id: user.id,
+        user_id: null, // Anonymous submissions
         question: markingRequest.question,
         answer: markingRequest.answer,
         mark_scheme: markingRequest.markScheme,
@@ -247,7 +209,6 @@ export async function POST(request: NextRequest) {
 
     const dbEndTime = Date.now();
     logger.logDatabaseEvent({
-      userId: user.id,
       sessionId: requestId,
       operation: 'write',
       table: 'submissions',
@@ -258,7 +219,6 @@ export async function POST(request: NextRequest) {
     if (submissionError || !submission) {
       logger.error('Supabase submission creation error', {
         requestId,
-        userId: user.id,
         error: submissionError,
       });
       return NextResponse.json(
@@ -273,11 +233,10 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info(
-      `Submission ${submission.id} created successfully for user ${user.id}`,
+      `Submission ${submission.id} created successfully for anonymous user`,
       {
         requestId,
         submissionId: submission.id,
-        userId: user.id,
       }
     );
 
@@ -304,7 +263,6 @@ export async function POST(request: NextRequest) {
 
     const feedbackDbEndTime = Date.now();
     logger.logDatabaseEvent({
-      userId: user.id,
       sessionId: requestId,
       operation: 'write',
       table: 'feedback',
@@ -337,25 +295,10 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Update usage count
-    await incrementUsage(user.id);
-    const updatedUsage = await checkUsageLimit(user.id);
-
-    logger.info(
-      `Usage updated for user ${user.id}: ${updatedUsage.usedToday}/${updatedUsage.limit}`,
-      {
-        requestId,
-        userId: user.id,
-        usedToday: updatedUsage.usedToday,
-        limit: updatedUsage.limit,
-      }
-    );
-
     // Log successful API completion
     const totalResponseTime = Date.now() - startTime;
     logger.logAPIEvent({
       sessionId: requestId,
-      userId: user.id,
       endpoint: '/api/mark',
       method: 'POST',
       statusCode: 200,
@@ -379,11 +322,6 @@ export async function POST(request: NextRequest) {
         modelUsed: feedback.model_used,
         gradeBoundaries: feedback.grade_boundaries,
       },
-      usage: {
-        used: updatedUsage.usedToday,
-        limit: updatedUsage.limit,
-        remaining: updatedUsage.limit - updatedUsage.usedToday,
-      },
       requestId,
     });
   } catch (error) {
@@ -404,7 +342,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/mark - Get marking information
+ * GET /api/mark - Get marking information for anonymous users
  *
  * @param request - The request object
  * @returns A response with marking information
@@ -414,47 +352,18 @@ export async function GET() {
   logger.info('GET /api/mark request received', { requestId });
 
   try {
-    // Get the authenticated user
-    const user = await getCurrentUser();
-    if (!user) {
-      logger.warn('Authentication failed for GET /api/mark', { requestId });
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          requestId,
-        },
-        { status: 401 }
-      );
-    }
+    // Get available providers for anonymous users
+    const availableProviders = aiRouter.getProviderInfo('FREE');
 
-    logger.info(`User ${user.id} authenticated for GET /api/mark`, {
+    logger.info(`Returning marking info for anonymous user`, {
       requestId,
-      userId: user.id,
-    });
-
-    // Get usage information and available providers
-    const usageCheck = await checkUsageLimit(user.id);
-    const availableProviders = aiRouter.getProviderInfo(user.subscriptionTier);
-
-    logger.info(`Returning marking info for user ${user.id}`, {
-      requestId,
-      userId: user.id,
-      usedToday: usageCheck.usedToday,
-      limit: usageCheck.limit,
       providerCount: availableProviders.length,
     });
 
     // Return success response
     return NextResponse.json({
       success: true,
-      usage: {
-        used: usageCheck.usedToday,
-        limit: usageCheck.limit,
-        remaining: usageCheck.limit - usageCheck.usedToday,
-        canUse: usageCheck.canUse,
-      },
       providers: availableProviders,
-      userTier: user.subscriptionTier,
       requestId,
     });
   } catch (error) {
