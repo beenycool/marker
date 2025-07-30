@@ -33,21 +33,46 @@ export default function Privacy() {
           <h2 className="text-2xl font-semibold mb-4">
             Information We Collect
           </h2>
+          <h3 className="text-lg font-semibold mb-2">Academic Content</h3>
           <ul className="list-disc pl-6 mb-4">
-            <li>User account information (name, email)</li>
-            <li>Student work submissions and content uploaded for marking</li>
-            <li>AI marking results, feedback, and grading history</li>
-            <li>Usage analytics and platform interaction data (via PostHog)</li>
-            <li>Application preferences and settings</li>
-            <li>
-              Subscription and payment information (processed securely through
-              Stripe)
-            </li>
-            <li>
-              Error logs and system monitoring data (via Sentry and Datadog)
-            </li>
-            <li>Rate limiting and performance data (via Upstash Redis)</li>
-            <li>Waitlist registration information</li>
+            <li>Questions and answers submitted for AI marking (up to 50,000 characters)</li>
+            <li>Mark schemes and grading criteria</li>
+            <li>Subject area, exam board, and educational context</li>
+            <li>Total marks and assessment parameters</li>
+          </ul>
+          
+          <h3 className="text-lg font-semibold mb-2">Account Information</h3>
+          <ul className="list-disc pl-6 mb-4">
+            <li>User account details (name, email)</li>
+            <li>Authentication and session data</li>
+            <li>User preferences and settings</li>
+            <li>Subscription status and billing information</li>
+          </ul>
+          
+          <h3 className="text-lg font-semibold mb-2">AI Processing Data</h3>
+          <ul className="list-disc pl-6 mb-4">
+            <li>AI provider and model information used for marking</li>
+            <li>Prompt versions and A/B test assignments</li>
+            <li>Token usage and processing costs</li>
+            <li>Response times and performance metrics</li>
+            <li>User ratings and feedback on AI responses</li>
+          </ul>
+          
+          <h3 className="text-lg font-semibold mb-2">System and Analytics Data</h3>
+          <ul className="list-disc pl-6 mb-4">
+            <li>Usage tracking and daily submission counts</li>
+            <li>Error logs and system monitoring data (via Sentry and Datadog)</li>
+            <li>Performance analytics and platform interaction data (via PostHog)</li>
+            <li>Rate limiting and caching data (via Upstash Redis)</li>
+            <li>Request IDs and structured logging information</li>
+            <li>Alert rules and system metrics for service monitoring</li>
+          </ul>
+          
+          <h3 className="text-lg font-semibold mb-2">Quality Assurance Data</h3>
+          <ul className="list-disc pl-6 mb-4">
+            <li>Golden test cases for AI accuracy validation</li>
+            <li>Test results and marking quality assessments</li>
+            <li>Admin user access logs and moderation data</li>
           </ul>
         </section>
 
@@ -66,13 +91,17 @@ export default function Privacy() {
               submissions, and marking history.
             </li>
             <li>
-              <strong>OpenRouter:</strong> We use OpenRouter to process your
-              answers with AI models like Kimi-v2, DeepSeek v3, and Qwen Pro for
-              marking and feedback generation.
+              <strong>OpenAI:</strong> We use OpenAI's GPT models for advanced AI marking and feedback generation.
             </li>
             <li>
               <strong>Google Gemini:</strong> We use Google's Gemini AI model to
               analyze and provide feedback on your submissions.
+            </li>
+            <li>
+              <strong>Anthropic Claude:</strong> We use Claude AI models for enhanced marking capabilities.
+            </li>
+            <li>
+              <strong>OpenRouter:</strong> We use OpenRouter to access additional AI models like Kimi-v2, DeepSeek v3, and Qwen Pro for diverse marking perspectives.
             </li>
             <li>
               <strong>PostHog:</strong> We use PostHog to understand how users
@@ -155,11 +184,18 @@ export default function Privacy() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Data Retention</h2>
           <p className="mb-4">
-            We retain user data for as long as necessary to provide our services
-            and comply with legal obligations. Users can delete their account
-            and associated data at any time through the settings page. Upon
-            account deletion, all personal data will be permanently removed from
-            our systems.
+            We retain different types of data for varying periods based on their purpose:
+          </p>
+          <ul className="list-disc pl-6 mb-4">
+            <li><strong>Academic Submissions:</strong> Retained indefinitely to provide service history and improve AI accuracy</li>
+            <li><strong>Usage Logs:</strong> Retained for 12 months for operational and security purposes</li>
+            <li><strong>Error Logs:</strong> Retained for 6 months for debugging and system improvement</li>
+            <li><strong>System Metrics:</strong> Aggregated data retained indefinitely for performance analysis</li>
+            <li><strong>User Sessions:</strong> Expired automatically based on session duration</li>
+            <li><strong>A/B Test Data:</strong> Retained for the duration of tests plus 6 months for analysis</li>
+          </ul>
+          <p className="mb-4">
+            Users can delete their account and associated personal data at any time through the settings page. Upon account deletion, personal identifiers will be removed, though anonymized academic content may be retained for service improvement purposes.
           </p>
         </section>
 
