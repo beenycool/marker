@@ -131,6 +131,13 @@ def process_ocr() -> Response:
     """Process OCR on uploaded image."""
     start_time = time.time()
     
+    # API Key Authentication
+    api_key = request.headers.get('X-API-Key')
+    expected_api_key = os.getenv('OCR_SERVICE_API_KEY')
+    
+    if not expected_api_key or api_key != expected_api_key:
+        return jsonify({"error": "Unauthorized"}), 401
+    
     try:
         # Check if image file is provided
         if 'image' not in request.files:
