@@ -215,6 +215,7 @@ export function MarkingForm() {
                           placeholder="Paste your GCSE question here..."
                           className="bg-white/10 border-white/20 text-white placeholder-gray-400 min-h-[100px]"
                           aria-describedby="question-description"
+                          data-tour="question-input"
                         />
                       </FormControl>
                       <FormDescription
@@ -242,6 +243,7 @@ export function MarkingForm() {
                           placeholder="Type or paste your answer here..."
                           className="bg-white/10 border-white/20 text-white placeholder-gray-400 min-h-[120px]"
                           aria-describedby="answer-description"
+                          data-tour="answer-input"
                         />
                       </FormControl>
                       <FormDescription
@@ -267,7 +269,7 @@ export function MarkingForm() {
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                            <SelectTrigger className="bg-white/10 border-white/20 text-white" data-tour="subject-select">
                               <SelectValue placeholder="Select subject" />
                             </SelectTrigger>
                           </FormControl>
@@ -363,6 +365,7 @@ export function MarkingForm() {
                           placeholder="Paste the mark scheme if available..."
                           className="bg-white/10 border-white/20 text-white placeholder-gray-400 min-h-[80px]"
                           aria-describedby="mark-scheme-description"
+                          data-tour="mark-scheme"
                         />
                       </FormControl>
                       <FormDescription
@@ -380,6 +383,7 @@ export function MarkingForm() {
                   type="submit"
                   disabled={!canSubmit}
                   className="w-full bg-blue-600 text-white"
+                  data-tour="submit-button"
                 >
                   {isMarking ? (
                     <>
