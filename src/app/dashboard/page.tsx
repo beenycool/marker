@@ -46,16 +46,17 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
-              <BarChart3 className="h-8 w-8" />
-              Your Session Dashboard
-            </h1>
-            <p className="text-gray-300">
-              Track your progress in this session. All data is stored locally in your browser.
-            </p>
-          </div>
+        <div className="mb-8">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
+                <BarChart3 className="h-8 w-8" />
+                Your Session Dashboard
+              </h1>
+              <p className="text-gray-300">
+                Track your progress in this session. All data is stored locally in your browser.
+              </p>
+            </div>
           
           <div className="flex gap-2">
             <TourTrigger variant="dashboard" />
@@ -71,6 +72,25 @@ export default function DashboardPage() {
               </Button>
             )}
           </div>
+          
+          {/* GDPR-Compliant Privacy Notice */}
+          <Card className="bg-blue-500/10 border-blue-500/20 mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 bg-blue-400 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-blue-300 text-sm font-medium mb-1">
+                    🔒 Privacy-First Analytics
+                  </p>
+                  <p className="text-blue-200 text-xs">
+                    All dashboard data is stored locally in your browser. No personal information, 
+                    questions, or answers are saved on our servers. Your data never leaves your device 
+                    unless you explicitly submit it for marking.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {analytics.totalSubmissions === 0 ? (

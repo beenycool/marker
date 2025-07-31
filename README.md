@@ -1,254 +1,205 @@
-# AIMARKER 🎯
+# AI Marker - Anonymous GCSE Marking Tool
 
-Free, anonymous AI-powered GCSE marking assistant with session-based analytics stored in your browser.
+A free, privacy-first AI marking tool for GCSE students during summer holidays. No accounts, no tracking, all processing ephemeral.
 
-## Features
+## 🔒 Privacy-First Architecture
 
-- 🤖 **AI-Powered Marking**: Multiple AI models including Gemini, Kimi-v2, and DeepSeek R1
-- 📝 **OCR Integration**: Upload handwritten or typed answers for instant marking
-- 📊 **Local Analytics**: Track progress in your browser session with automatic data cleanup
-- 🎯 **Grade Boundaries**: Accurate GCSE grading based on official standards
-- 🔒 **Privacy-First**: No accounts, no tracking, all data stored locally
-- 🌐 **Anonymous Access**: Rate-limited usage without any personal information
-- 📱 **Responsive Design**: Works seamlessly on desktop and mobile
-- ⚡ **Edge Runtime**: Deployed on Cloudflare Workers for global performance
+- **Zero Storage**: No questions, answers, or personal data stored on servers
+- **Ephemeral Processing**: All data processed in real-time and immediately discarded
+- **Local Analytics**: Dashboard data stored only in your browser's localStorage
+- **Anonymous Rate Limiting**: IP hashing with daily deletion for abuse prevention
+- **GDPR Compliant**: No personal data collection or storage
 
-## Tech Stack
+## 🚀 Features
 
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript  
-- **Database**: PostgreSQL with Supabase (submissions only, no user data)
-- **Storage**: Browser localStorage for session analytics
-- **AI Models**: Google Gemini, Moonshot Kimi-v2, DeepSeek R1 via OpenRouter
-- **Deployment**: Cloudflare Workers (Edge Runtime)
-- **Styling**: Tailwind CSS
-- **Rate Limiting**: IP-based anonymous counters with automatic cleanup
-- **Privacy**: GDPR-compliant with automatic data purging
+- **AI-Powered Marking**: Advanced AI models provide accurate, consistent marking
+- **OCR Support**: Upload photos of handwritten work for instant text conversion
+- **Grade Boundaries**: Optional GCSE grade boundary integration
+- **Progress Tracking**: Local session analytics with privacy guarantees
+- **Multiple AI Providers**: OpenRouter, GPT, Claude, Gemini support
+- **Subject-Specific**: Tailored marking for different GCSE subjects
 
-## Getting Started
+## 🏗️ Architecture
 
-### Prerequisites
+### Cloudflare Workers Deployment
+- **Frontend**: Next.js deployed to Cloudflare Pages
+- **API**: Cloudflare Workers for serverless marking endpoints
+- **Database**: Supabase (anonymous counters only, no personal data)
+- **OCR Service**: Separate service connected via Cloudflare Tunnel
 
-- Node.js 18+ and npm
-- Supabase account and project
-- Cloudflare account (for deployment)
-- API keys for AI services
+### Anonymous Design
+- No user authentication or accounts
+- No session management or cookies
+- No personal data persistence
+- IP-based rate limiting with daily hash rotation
 
-### Database Setup
+## 📁 Project Structure
 
-Run the anonymous features migration in your Supabase SQL editor:
-
-```sql
--- Run migrations/anonymous_features.sql in Supabase
--- This creates IP-based rate limiting and GDPR-compliant cleanup
+```
+src/
+├── app/
+│   ├── (main)/           # Main marking interface
+│   ├── dashboard/        # Local analytics dashboard
+│   ├── privacy/          # Privacy policy
+│   └── api/
+│       ├── mark/         # Core marking endpoint
+│       ├── ocr/          # Image text extraction
+│       └── health/       # Service health check
+├── components/
+│   ├── forms/            # Marking form components
+│   ├── dashboard/        # Analytics components
+│   └── tours/            # User onboarding
+├── hooks/
+│   └── useLocalDashboard.ts  # localStorage analytics
+└── lib/
+    ├── ai/               # AI provider integrations
+    ├── rate-limit.ts     # Anonymous rate limiting
+    └── logger.ts         # Privacy-safe logging
 ```
 
-Enable the `pg_cron` extension and set up daily cleanup:
+## 🛠️ Development
 
-```sql
-SELECT cron.schedule('daily-cleanup', '0 3 * * *', 
-  'SELECT cleanup_old_counters(); SELECT cleanup_expired_shares();'
-);
+### Prerequisites
+- Node.js 18+
+- Cloudflare account
+- Supabase project (for anonymous counters)
+
+### Local Development
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+
+# Run development server
+npm run dev
 ```
 
 ### Environment Variables
-
-Create a `.env.local` file:
-
-```bash
-# Supabase
+```env
+# Supabase (for anonymous counters only)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 
-# AI APIs
-GOOGLE_AI_API_KEY=your_google_ai_key
+# AI Providers
 OPENROUTER_API_KEY=your_openrouter_key
+OPENAI_API_KEY=your_openai_key
+GOOGLE_API_KEY=your_google_key
 
-# Cloudflare
-CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
-CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
+# Rate Limiting
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
 
-# Monitoring
-SENTRY_DSN=your_sentry_dsn
-POSTHOG_KEY=your_posthog_key
-DATADOG_CLIENT_TOKEN=your_datadog_token
+# OCR Service
+OCR_SERVICE_URL=your_ocr_service_url
+OCR_API_KEY=your_ocr_key
 ```
 
-### Installation
+## 🚀 Deployment
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/aimarker.git
-   cd aimarker
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up Supabase**
-    - Create a new Supabase project
-    - Run the SQL migrations in `prisma/migrations/` using the raw SQL files
-    - Set up authentication providers (Email, Google, GitHub)
-    - Note: While Prisma files are present for schema definition, the application uses the Supabase client directly for database operations
-
-4. **Configure environment variables**
-   - Copy `.env.example` to `.env.local`
-   - Fill in all required environment variables
-
-5. **Run database migrations**
-   ```bash
-   # Apply migrations to your Supabase project
-   # Use the SQL files in prisma/migrations/
-   ```
-
-6. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-7. **Open your browser**
-   ```
-   http://localhost:3000
-   ```
-
-## Development
-
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run test` - Run Jest tests
-- `npm run test:watch` - Run tests in watch mode
-- `npm run test:coverage` - Run tests with coverage
-- `npm run e2e` - Run Playwright e2e tests
-- `npm run lint` - Run ESLint
-- `npm run format` - Format code with Prettier
-- `npm run type-check` - Run TypeScript type checking
-
-### Database Schema
-
-The application uses Supabase with the following main tables:
-
-- `users` - User accounts and subscription data
-- `submissions` - Student answer submissions
-- `feedback` - AI-generated marking feedback
-- `usage_tracking` - Daily API usage tracking
-- `past_papers` - GCSE past paper questions
-
-### Authentication
-
-Authentication is handled by **Supabase Auth** with support for:
-- Email/password authentication
-- OAuth providers (Google, GitHub)
-- Magic link authentication
-- Session management with secure cookies
-
-### AI Integration
-
-The application integrates with multiple AI providers through a unified interface:
-
-- **Google Gemini** (Free tier)
-- **Moonshot Kimi-v2** (Pro tier)
-- **DeepSeek R1** (Pro tier)
-
-All AI requests are routed through OpenRouter for consistent API access.
-
-## Testing
-
-### Unit Tests
+### Cloudflare Workers
 ```bash
-npm run test
+# Build and deploy
+npm run deploy
+
+# Or deploy to Cloudflare Pages
+npm run cf-pages:deploy
 ```
 
-### E2E Tests
-```bash
-# Install Playwright browsers (first time only)
-npx playwright install
+### OCR Service Setup
+1. Deploy OCR service to a VM/container platform
+2. Set up Cloudflare Tunnel for secure connection
+3. Configure tunnel in `wrangler.toml`
 
-# Run e2e tests
-npm run e2e
+## 📊 Analytics & Monitoring
 
-# Run with UI
-npm run e2e:ui
-```
+### Anonymous Analytics
+- Aggregate usage counters (no personal data)
+- Subject popularity statistics
+- Response time metrics
+- Error rate monitoring
 
-## Deployment
+### Local Analytics
+- Session statistics in localStorage
+- Personal progress tracking
+- Grade distribution (browser-only)
 
-### Cloudflare Workers (Recommended)
+## 🔧 Rate Limiting
 
-1. **Build and deploy**
-   ```bash
-   npm run deploy
-   ```
+Anonymous rate limiting implementation:
+- Daily IP hash rotation with salt
+- Redis-based counters
+- Graceful degradation for exceeded limits
+- No permanent IP storage
 
-2. **Preview deployment**
-   ```bash
-   npm run preview
-   ```
+## 🛡️ Security
 
-### Environment Setup
+- No authentication attack surface
+- Cloudflare DDoS protection
+- Tunnel-secured OCR service
+- Content validation and sanitization
+- No SQL injection risks (no user data storage)
 
-Use the provided script to set up Cloudflare secrets:
-```bash
-./setup-cloudflare-secrets.sh
-```
+## 📝 API Endpoints
 
-### Manual Deployment
+### `POST /api/mark`
+Submit work for AI marking
+- **Input**: Question, answer, optional metadata
+- **Output**: Ephemeral marking results
+- **Rate Limited**: Anonymous IP-based
+- **Storage**: None (ephemeral processing)
 
-1. **Build the application**
-   ```bash
-   npm run build
-   ```
+### `POST /api/ocr`
+Extract text from uploaded images
+- **Input**: Image file
+- **Output**: Extracted text
+- **Rate Limited**: Yes
+- **Storage**: None (immediate deletion)
 
-2. **Build for Cloudflare**
-   ```bash
-   opennextjs-cloudflare build
-   ```
+### `GET /api/health`
+Service health check
+- **Output**: Service status
+- **Rate Limited**: No
 
-3. **Deploy to Cloudflare**
-   ```bash
-   wrangler deploy
-   ```
+## 📚 Dependencies
 
-## Architecture
+### Core
+- **Next.js 15**: React framework
+- **TypeScript**: Type safety
+- **Tailwind CSS**: Styling
+- **Framer Motion**: Animations
 
-### Edge Runtime
-The application is optimized for Cloudflare Workers edge runtime:
-- Server-side rendering at the edge
-- Database connections via Supabase
-- AI API calls through OpenRouter
-- Static assets served from Cloudflare CDN
+### AI & Processing
+- **OpenRouter**: AI model routing
+- **OpenAI SDK**: GPT integration
+- **Google AI**: Gemini integration
+- **Zod**: Schema validation
 
-### Security Features
-- Content Security Policy (CSP) headers
-- Rate limiting on API endpoints
-- Input validation and sanitization
-- Secure authentication with Supabase
-- Environment variable protection
+### Infrastructure
+- **@upstash/ratelimit**: Anonymous rate limiting
+- **@upstash/redis**: Redis client
+- **@opennextjs/cloudflare**: Cloudflare deployment
 
-### Performance Optimizations
-- Edge runtime for global performance
-- Database query optimization
-- Image optimization with Next.js
-- Static asset caching
-- API response caching
+## 🤝 Contributing
 
-## Contributing
+1. Maintain privacy-first principles
+2. No personal data storage
+3. Test with anonymous rate limiting
+4. Follow existing code patterns
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## 📄 License
 
-## License
+MIT License - See LICENSE file
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 🔒 Privacy Policy
 
-## Support
+See `/privacy` for detailed privacy information. Key points:
+- No personal data storage
+- Ephemeral processing only
+- Local analytics in browser
+- GDPR compliant by design
 
-For support, email support@aimarker.tech or join our Discord server.
+---
+
+**Built for students, by developers who respect privacy.**
