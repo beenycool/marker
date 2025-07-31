@@ -17,7 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_anonymous_counters_key ON anonymous_counters(key)
 CREATE OR REPLACE FUNCTION increment_anonymous_counter(
     counter_key TEXT,
     increment INT DEFAULT 1,
-    max_value INT DEFAULT 200
+    max_value INT DEFAULT 30
 )
 RETURNS TABLE(count INT) AS $$
 DECLARE
