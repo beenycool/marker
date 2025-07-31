@@ -9,6 +9,7 @@ import { Menu, X } from 'lucide-react';
 const navLinks = [
   { name: 'Features', href: '#features' },
   { name: 'How it Works', href: '#how-it-works' },
+  { name: 'Dashboard', href: '/dashboard' },
   { name: 'Pricing', href: '#pricing' },
   { name: 'FAQ', href: '#faq' },
 ];
@@ -43,6 +44,7 @@ export function StaticHeader() {
                 <Link
                   href={link.href}
                   className="text-gray-300 hover:text-white transition-colors"
+                  data-tour={link.name === 'Dashboard' ? 'dashboard-link' : undefined}
                 >
                   {link.name}
                 </Link>

@@ -1,30 +1,29 @@
 # AIMARKER 🎯
 
-AI-powered GCSE marking assistant built with Next.js 15, TypeScript, and modern web technologies.
+Free, anonymous AI-powered GCSE marking assistant with session-based analytics stored in your browser.
 
 ## Features
 
 - 🤖 **AI-Powered Marking**: Multiple AI models including Gemini, Kimi-v2, and DeepSeek R1
 - 📝 **OCR Integration**: Upload handwritten or typed answers for instant marking
-- 📊 **Analytics Dashboard**: Track progress and identify areas for improvement
+- 📊 **Local Analytics**: Track progress in your browser session with automatic data cleanup
 - 🎯 **Grade Boundaries**: Accurate GCSE grading based on official standards
-- 🔐 **Authentication**: Secure user authentication with Supabase Auth
-- 💳 **Subscription Management**: Free and Pro tiers with usage limits
+- 🔒 **Privacy-First**: No accounts, no tracking, all data stored locally
+- 🌐 **Anonymous Access**: Rate-limited usage without any personal information
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile
 - ⚡ **Edge Runtime**: Deployed on Cloudflare Workers for global performance
 
 ## Tech Stack
 
 - **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Database**: PostgreSQL with Supabase
-- **Authentication**: Supabase Auth
+- **Language**: TypeScript  
+- **Database**: PostgreSQL with Supabase (submissions only, no user data)
+- **Storage**: Browser localStorage for session analytics
 - **AI Models**: Google Gemini, Moonshot Kimi-v2, DeepSeek R1 via OpenRouter
 - **Deployment**: Cloudflare Workers (Edge Runtime)
 - **Styling**: Tailwind CSS
-- **Database Client**: Supabase client with TypeScript types
-- **Testing**: Jest + React Testing Library + Playwright
-- **Monitoring**: Sentry, PostHog, Datadog
+- **Rate Limiting**: IP-based anonymous counters with automatic cleanup
+- **Privacy**: GDPR-compliant with automatic data purging
 
 ## Getting Started
 
@@ -34,6 +33,23 @@ AI-powered GCSE marking assistant built with Next.js 15, TypeScript, and modern 
 - Supabase account and project
 - Cloudflare account (for deployment)
 - API keys for AI services
+
+### Database Setup
+
+Run the anonymous features migration in your Supabase SQL editor:
+
+```sql
+-- Run migrations/anonymous_features.sql in Supabase
+-- This creates IP-based rate limiting and GDPR-compliant cleanup
+```
+
+Enable the `pg_cron` extension and set up daily cleanup:
+
+```sql
+SELECT cron.schedule('daily-cleanup', '0 3 * * *', 
+  'SELECT cleanup_old_counters(); SELECT cleanup_expired_shares();'
+);
+```
 
 ### Environment Variables
 
@@ -48,11 +64,6 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 # AI APIs
 GOOGLE_AI_API_KEY=your_google_ai_key
 OPENROUTER_API_KEY=your_openrouter_key
-
-# Stripe
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
 # Cloudflare
 CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id

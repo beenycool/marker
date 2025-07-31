@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, BarChart3, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { TourTrigger } from '@/components/tours/tour-trigger';
 
 export default function DashboardPage() {
   const { analytics, recentSubmissions, isLoading, clearHistory } = useLocalDashboard();
@@ -56,16 +57,20 @@ export default function DashboardPage() {
             </p>
           </div>
           
-          {analytics.totalSubmissions > 0 && (
-            <Button
-              variant="outline"
-              onClick={handleClearHistory}
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear Session History
-            </Button>
-          )}
+          <div className="flex gap-2">
+            <TourTrigger variant="dashboard" />
+            {analytics.totalSubmissions > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleClearHistory}
+                className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                data-tour="clear-history"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear Session History
+              </Button>
+            )}
+          </div>
         </div>
 
         {analytics.totalSubmissions === 0 ? (
@@ -97,10 +102,10 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2" data-tour="analytics-section">
               <AnalyticsCharts data={{ analytics }} />
             </div>
-            <div>
+            <div data-tour="recent-submissions">
               <RecentSubmissions submissions={recentSubmissions} />
               
               <Card className="bg-blue-500/10 border-blue-500/20 mt-6">
