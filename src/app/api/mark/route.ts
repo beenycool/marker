@@ -1,7 +1,6 @@
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getDb } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { aiRouter } from '@/lib/ai/router';
 import { MarkingRequest } from '@/types';
@@ -9,7 +8,6 @@ import {
   GradeEnhancedMarkingService,
   EnhancedMarkingResponse,
 } from '@/lib/marking/grade-enhanced-marking';
-import { trackSubmissionCreated } from '@/lib/analytics';
 
 // Use Node.js runtime for Cloudflare compatibility
 export const runtime = 'nodejs';
@@ -34,6 +32,8 @@ const markingRequestSchema = z.object({
 
 /**
  * POST /api/mark - Submit work for AI marking
+ * GDPR-COMPLIANT: No personal data is stored in databases.
+ * All processing is ephemeral and results are returned directly.
  *
  * @param request - The request object
  * @returns A response with the marking results
@@ -176,7 +176,6 @@ export async function POST(request: NextRequest) {
           );
         logger.info(`Successfully enhanced response with grade boundaries`, {
           requestId,
-          
           grade: enhancedResponse.grade,
         });
       } catch (error) {
@@ -189,111 +188,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save submission to database
-    const client = await getDb();
-    const dbStartTime = Date.now();
-    const { data: submission, error: submissionError } = await client
-      .from('submissions')
-      .insert({
-        user_id: null, // Anonymous submissions
-        question: markingRequest.question,
-        answer: markingRequest.answer,
-        mark_scheme: markingRequest.markScheme,
-        marks_total: markingRequest.marksTotal,
-        subject: markingRequest.subject,
-        exam_board: markingRequest.examBoard,
-        request_id: requestId,
-      })
-      .select('id, created_at')
-      .single();
-
-    const dbEndTime = Date.now();
-    logger.logDatabaseEvent({
-      sessionId: requestId,
-      operation: 'write',
-      table: 'submissions',
-      queryTimeMs: dbEndTime - dbStartTime,
-      success: !submissionError,
-    });
-
-    if (submissionError || !submission) {
-      logger.error('Supabase submission creation error', {
-        requestId,
-        error: submissionError,
-      });
-      return NextResponse.json(
-        {
-          error: 'Failed to create submission',
-          details:
-            'There was an issue saving your submission. Please try again.',
-          requestId,
-        },
-        { status: 500 }
-      );
-    }
-
-    logger.info(
-      `Submission ${submission.id} created successfully for anonymous user`,
-      {
-        requestId,
-        submissionId: submission.id,
-      }
-    );
-
-    // Track submission creation event
-    trackSubmissionCreated();
-
-    // Save feedback to database
-    const feedbackDbStartTime = Date.now();
-    const { data: feedback, error: feedbackError } = await client
-      .from('feedback')
-      .insert({
-        submission_id: submission.id,
-        ai_response: enhancedResponse.aiResponse,
-        score: enhancedResponse.score,
-        grade: enhancedResponse.grade,
-        aos_met: enhancedResponse.aosMet,
-        improvement_suggestions: enhancedResponse.improvementSuggestions,
-        model_used: enhancedResponse.modelUsed,
-        grade_boundaries: enhancedResponse.gradeBoundaries || null,
-        request_id: requestId,
-      })
-      .select('*')
-      .single();
-
-    const feedbackDbEndTime = Date.now();
-    logger.logDatabaseEvent({
-      sessionId: requestId,
-      operation: 'write',
-      table: 'feedback',
-      queryTimeMs: feedbackDbEndTime - feedbackDbStartTime,
-      success: !feedbackError,
-    });
-
-    if (feedbackError || !feedback) {
-      logger.error('Supabase feedback creation error', {
-        requestId,
-        submissionId: submission.id,
-        error: feedbackError,
-      });
-      return NextResponse.json(
-        {
-          error: 'Failed to create feedback',
-          details: 'There was an issue saving the feedback. Please try again.',
-          requestId,
-        },
-        { status: 500 }
-      );
-    }
-
-    logger.info(
-      `Feedback ${feedback.id} created successfully for submission ${submission.id}`,
-      {
-        requestId,
-        feedbackId: feedback.id,
-        submissionId: submission.id,
-      }
-    );
+    // GDPR-COMPLIANT: No database storage of personal data
+    // Analytics are handled client-side via localStorage only
 
     // Log successful API completion
     const totalResponseTime = Date.now() - startTime;
@@ -305,24 +201,21 @@ export async function POST(request: NextRequest) {
       responseTimeMs: totalResponseTime,
     });
 
-    // Return success response
+    // Return success response with ephemeral data
     return NextResponse.json({
       success: true,
-      submission: {
-        id: submission.id,
-        createdAt: submission.created_at,
-      },
+      id: requestId, // Use request ID instead of database ID
       feedback: {
-        id: feedback.id,
-        score: feedback.score,
-        grade: feedback.grade,
-        aosMet: feedback.aos_met,
-        improvementSuggestions: feedback.improvement_suggestions,
-        aiResponse: feedback.ai_response,
-        modelUsed: feedback.model_used,
-        gradeBoundaries: feedback.grade_boundaries,
+        score: enhancedResponse.score,
+        grade: enhancedResponse.grade,
+        aosMet: enhancedResponse.aosMet,
+        improvementSuggestions: enhancedResponse.improvementSuggestions,
+        aiResponse: enhancedResponse.aiResponse,
+        modelUsed: enhancedResponse.modelUsed,
+        gradeBoundaries: enhancedResponse.gradeBoundaries,
       },
       requestId,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     logger.error('Unexpected error in POST /api/mark', {
