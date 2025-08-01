@@ -1,23 +1,26 @@
 # AI Marker - Anonymous GCSE Marking Tool
 
-A free, privacy-first AI marking tool for GCSE students during summer holidays. No accounts, no tracking, all processing ephemeral.
+A free, privacy-first AI marking tool built by students for students. Created during our own GCSE preparation because we needed faster feedback. No accounts, no tracking, all processing ephemeral.
 
 ## 🔒 Privacy-First Architecture
 
-- **Zero Storage**: No questions, answers, or personal data stored on servers
+We understand how stressful GCSEs are without adding privacy concerns. That's why we built this with zero tracking:
+
+- **Zero Storage**: No questions, answers, or personal data stored on our servers
 - **Ephemeral Processing**: All data processed in real-time and immediately discarded
-- **Local Analytics**: Dashboard data stored only in your browser's localStorage
-- **Anonymous Rate Limiting**: IP hashing with daily deletion for abuse prevention
-- **GDPR Compliant**: No personal data collection or storage
+- **Local Analytics**: Dashboard data stored only in your browser - we cannot access it
+- **Anonymous Rate Limiting**: IP hashing with daily deletion for abuse prevention only
+- **Third-Party Processing**: When you submit work for marking, it's sent to AI providers (OpenAI, Google, etc.) for processing but not stored
+- **GDPR Compliant**: No personal data collection or persistent storage anywhere
 
 ## 🚀 Features
 
-- **AI-Powered Marking**: Advanced AI models provide accurate, consistent marking
-- **OCR Support**: Upload photos of handwritten work for instant text conversion
+- **AI-Powered Marking**: Get detailed feedback within seconds
+- **OCR Support**: Upload photos of handwritten work for automatic text conversion
 - **Grade Boundaries**: Optional GCSE grade boundary integration
-- **Progress Tracking**: Local session analytics with privacy guarantees
-- **Multiple AI Providers**: OpenRouter, GPT, Claude, Gemini support
-- **Subject-Specific**: Tailored marking for different GCSE subjects
+- **Progress Tracking**: Local session analytics stored on your device
+- **Multiple AI Providers**: Uses the best AI models available - OpenRouter, GPT, Claude, Gemini
+- **Subject-Specific**: Tailored marking for all GCSE subjects
 
 ## 🏗️ Architecture
 
@@ -28,10 +31,10 @@ A free, privacy-first AI marking tool for GCSE students during summer holidays. 
 - **OCR Service**: Separate service connected via Cloudflare Tunnel
 
 ### Anonymous Design
-- No user authentication or accounts
+- No user authentication or accounts required
 - No session management or cookies
 - No personal data persistence
-- IP-based rate limiting with daily hash rotation
+- IP-based rate limiting with daily hash rotation for spam prevention only
 
 ## 📁 Project Structure
 
@@ -183,7 +186,9 @@ Service health check
 
 ## 🤝 Contributing
 
-1. Maintain privacy-first principles
+We're students building for students. If you want to help:
+
+1. Maintain privacy-first principles - no tracking
 2. No personal data storage
 3. Test with anonymous rate limiting
 4. Follow existing code patterns
@@ -194,12 +199,13 @@ MIT License - See LICENSE file
 
 ## 🔒 Privacy Policy
 
-See `/privacy` for detailed privacy information. Key points:
-- No personal data storage
-- Ephemeral processing only
-- Local analytics in browser
-- GDPR compliant by design
+See `/privacy` for complete privacy information. Key points:
+- **No work storage** - we don't store your questions or answers
+- **Immediate deletion** - all data is processed and discarded
+- **Local dashboard data** - stays in your browser only
+- **AI providers don't store data** - processing only, no retention
+- **Built by students** - we understand privacy concerns during exam preparation
 
 ---
 
-**Built for students, by developers who respect privacy.**
+**Built by students for students - because faster feedback should be a right, not a privilege.**

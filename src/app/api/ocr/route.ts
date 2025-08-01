@@ -1,7 +1,6 @@
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { ocrRateLimiter } from '@/lib/ocr/rate-limiter';
+import { rateLimit } from '@/lib/rate-limit';
 import { ocrCache } from '@/lib/ocr/cache';
 import { ocrCircuitBreaker } from '@/lib/ocr/circuit-breaker';
 import { ocrRetryHandler } from '@/lib/ocr/retry';
@@ -38,13 +37,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 }
 
 // Enhanced validation with security checks
-function validateRequest(req: NextRequest): { valid: boolean; error?: string; apiKey?: string } {
-  // API key validation
-  const apiKey = req.headers.get('X-API-Key');
-  if (!apiKey || apiKey !== process.env.OCR_API_KEY) {
-    return { valid: false, error: 'Invalid API key' };
-  }
-
+function validateRequest(req: NextRequest): { valid: boolean; error?: string } {
   // Content-Type validation
   const contentType = req.headers.get('content-type');
   if (!contentType || !contentType.includes('multipart/form-data')) {
@@ -57,7 +50,7 @@ function validateRequest(req: NextRequest): { valid: boolean; error?: string; ap
     return { valid: false, error: 'Request too large' };
   }
 
-  return { valid: true, apiKey };
+  return { valid: true };
 }
 
 // Enhanced file validation
@@ -84,11 +77,11 @@ function validateFile(file: File): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-// OCR service call with timeout and compression
+// OCR service call with timeout and Cloudflare Tunnel security
 async function callOCRService(
   formData: FormData,
   ocrEndpoint: string,
-  ocrApiKey: string
+  tunnelToken: string
 ): Promise<OCRServiceResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), OCR_TIMEOUT);
@@ -98,7 +91,9 @@ async function callOCRService(
       method: 'POST',
       body: formData,
       headers: {
-        'X-API-Key': ocrApiKey,
+        'CF-Access-Client-Id': process.env.OCR_TUNNEL_CLIENT_ID || '',
+        'CF-Access-Client-Secret': process.env.OCR_TUNNEL_CLIENT_SECRET || '',
+        'Authorization': `Bearer ${tunnelToken}`,
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate, br',
         'User-Agent': 'AIMARKER-CloudflareWorker/1.0'
@@ -125,57 +120,34 @@ async function callOCRService(
   }
 }
 
-// Optimized database operation with error handling
-async function storeOCRUsage(apiKey: string, result: OCRServiceResponse): Promise<void> {
-  try {
-    const dbClient = await db;
-    await dbClient.from('submissions').insert({
-      api_key: apiKey,
-      question: 'OCR Extraction',
-      answer: result.text.substring(0, 10000), // Limit text length
-      subject: 'OCR',
-      created_at: new Date().toISOString()
-    });
-  } catch (error) {
-    // Log but don't fail the request for database issues
-    logger.error('Failed to store OCR usage in database', error);
-  }
+// GDPR-COMPLIANT: No personal data storage
+// Only track anonymous aggregate statistics
+function trackOCRUsage(): void {
+  // Increment anonymous counter only
+  // No personal data (extracted text) is stored
+  logger.info('OCR processing completed (anonymous)', {
+    timestamp: new Date().toISOString()
+  });
 }
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(2, 15);
   ocrMetrics.recordRequest();
 
   try {
+    // Anonymous rate limiting (IP-based)
+    const rateLimitResponse = await rateLimit(req);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Request validation
     const validation = validateRequest(req);
     if (!validation.valid) {
       const response = NextResponse.json(
-        { error: validation.error },
-        { status: validation.error === 'Invalid API key' ? 401 : 400 }
-      );
-      return addSecurityHeaders(response);
-    }
-
-    const apiKey = validation.apiKey!;
-
-    // Rate limiting check
-    const rateLimitResult = ocrRateLimiter.isAllowed(apiKey);
-    if (!rateLimitResult.allowed) {
-      ocrMetrics.recordRateLimit();
-      const response = NextResponse.json(
-        {
-          error: 'Rate limit exceeded',
-          resetTime: rateLimitResult.resetTime,
-          remaining: 0
-        },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': Math.ceil((rateLimitResult.resetTime! - Date.now()) / 1000).toString(),
-            'X-RateLimit-Remaining': '0'
-          }
-        }
+        { error: validation.error, requestId },
+        { status: 400 }
       );
       return addSecurityHeaders(response);
     }
@@ -204,7 +176,7 @@ export async function POST(req: NextRequest) {
 
     // Get file buffer for caching
     const fileBuffer = await file.arrayBuffer();
-    const languages = ['en']; // Could be extended to parse from request
+    const languages = ['en']; // TrOCR is primarily English-trained
     const cacheKey = ocrCache.generateKey(fileBuffer, languages);
 
     // Check cache first
@@ -233,21 +205,20 @@ export async function POST(req: NextRequest) {
 
     // Environment variables validation
     const ocrEndpoint = process.env.OCR_SERVICE_ENDPOINT;
-    const ocrApiKey = process.env.OCR_SERVICE_API_KEY;
+    const tunnelToken = process.env.OCR_TUNNEL_TOKEN;
 
-    if (!ocrEndpoint || !ocrApiKey) {
+    if (!ocrEndpoint || !tunnelToken) {
       throw new Error('OCR service configuration missing');
     }
 
     // Prepare form data for OCR service
     const ocrFormData = new FormData();
     ocrFormData.append('image', new Blob([fileBuffer], { type: file.type }), file.name);
-    ocrFormData.append('languages', JSON.stringify(languages));
 
     // OCR processing with circuit breaker and retry logic
     const ocrResult = await ocrCircuitBreaker.execute(async () => {
       return await ocrRetryHandler.execute(
-        () => callOCRService(ocrFormData, ocrEndpoint, ocrApiKey),
+        () => callOCRService(ocrFormData, ocrEndpoint, tunnelToken),
         'OCR service call'
       );
     });
@@ -274,26 +245,24 @@ export async function POST(req: NextRequest) {
     // Cache the result
     ocrCache.set(cacheKey, result, 24 * 60 * 60 * 1000); // 24 hour TTL
 
-    // Store usage in database (async, non-blocking)
-    storeOCRUsage(apiKey, ocrResult).catch(error => {
-      logger.error('Async database storage failed', error);
-    });
+    // GDPR-COMPLIANT: Track anonymous usage only
+    trackOCRUsage();
 
-    // Log successful processing
+    // Log successful processing (no personal data)
     logger.info('OCR processed successfully', {
+      requestId,
       fileSize: file.size,
       confidence: result.confidence,
       textLength: result.text.length,
-      processingTime,
-      rateLimitRemaining: rateLimitResult.remaining
+      processingTime
     });
 
     const response = NextResponse.json({
       success: true,
-      result
+      result,
+      requestId
     }, {
       headers: {
-        'X-RateLimit-Remaining': rateLimitResult.remaining?.toString() || '0',
         'X-Processing-Time': processingTime.toString()
       }
     });
@@ -343,20 +312,10 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    // API key validation
-    const apiKey = req.headers.get('X-API-Key');
-    if (!apiKey || apiKey !== process.env.OCR_API_KEY) {
-      const response = NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401 }
-      );
-      return addSecurityHeaders(response);
-    }
-
     const ocrEndpoint = process.env.OCR_SERVICE_ENDPOINT;
-    const ocrApiKey = process.env.OCR_SERVICE_API_KEY;
+    const tunnelToken = process.env.OCR_TUNNEL_TOKEN;
 
-    if (!ocrEndpoint || !ocrApiKey) {
+    if (!ocrEndpoint || !tunnelToken) {
       throw new Error('OCR service configuration missing');
     }
 
@@ -370,7 +329,9 @@ export async function GET(req: NextRequest) {
     try {
       const healthResponse = await fetch(`${ocrEndpoint}/health`, {
         headers: {
-          'Authorization': `Bearer ${ocrApiKey}`,
+          'CF-Access-Client-Id': process.env.OCR_TUNNEL_CLIENT_ID || '',
+          'CF-Access-Client-Secret': process.env.OCR_TUNNEL_CLIENT_SECRET || '',
+          'Authorization': `Bearer ${tunnelToken}`,
           'Accept': 'application/json'
         },
         signal: controller.signal
@@ -394,17 +355,16 @@ export async function GET(req: NextRequest) {
       supportedFormats: ['JPG', 'PNG', 'GIF', 'WebP', 'BMP'],
       maxFileSize: '5MB',
       features: [
-        'Handwritten text recognition',
-        'Mathematical expressions', 
-        'Printed text extraction',
-        'Multi-language support',
+        'Advanced handwritten text recognition',
+        'Mathematical expressions and formulas', 
+        'Student handwriting optimization',
+        'High accuracy for educational content',
         'Intelligent caching',
         'Rate limiting protection',
         'Circuit breaker reliability'
       ],
-      supportedLanguages: [
-        'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh'
-      ],
+      model: 'microsoft/trocr-base-handwritten',
+      supportedLanguages: ['en'],
       metrics: {
         requests: metrics.totalRequests,
         successRate: `${metrics.successRate}%`,

@@ -33,7 +33,7 @@ const faqs = [
   {
     question: 'Can I use this for group study sessions?',
     answer:
-      'Yes! You can share your feedback and progress with study groups. Pro users get additional collaboration features for peer learning.',
+      'Yes! You can share your feedback and progress with study groups. Everyone gets the same powerful collaboration features.',
     icon: Users,
   },
   {
@@ -45,7 +45,7 @@ const faqs = [
   {
     question: "What if I disagree with the AI's assessment?",
     answer:
-      'AI marking is a tool to help you learn. If you disagree with the feedback, Pro users can ask follow-up questions to clarify the reasoning and get additional explanations.',
+      'AI marking is a tool to help you learn. If you disagree with the feedback, you can ask follow-up questions to clarify the reasoning and get additional explanations.',
     icon: HelpCircle,
   },
 ];

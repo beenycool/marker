@@ -1,6 +1,5 @@
-import { notFound, redirect } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
-import { getDb } from '@/lib/db';
+import { notFound } from 'next/navigation';
+import { db } from '@/lib/db';
 import PastPaperClient from './client';
 
 interface PastPaperPageProps {
@@ -11,13 +10,9 @@ interface PastPaperPageProps {
 
 export default async function PastPaperPage({ params }: PastPaperPageProps) {
   const { id } = await params;
-  const user = await getCurrentUser();
 
-  if (!user) {
-    redirect('/sign-in');
-  }
-
-  const client = await getDb();
+  // Anonymous-friendly fetch (no user/session)
+  const client = await db;
   const { data: pastPaper, error } = await client
     .from('past_papers')
     .select('*')
@@ -28,9 +23,7 @@ export default async function PastPaperPage({ params }: PastPaperPageProps) {
     notFound();
   }
 
-  const questions = Array.isArray(pastPaper.questions)
-    ? pastPaper.questions
-    : [];
+  const questions = Array.isArray(pastPaper.questions) ? pastPaper.questions : [];
   const totalMarks = questions.reduce(
     (sum: number, q: any) => sum + (q.marks || 0),
     0

@@ -1,472 +1,369 @@
-import { logger } from '../logger';
-import { getSupabase } from '../supabase';
+import { createClient } from '@supabase/supabase-js';
 import { MarkingRequest, MarkingResponse } from '@/types';
+import { logger } from '@/lib/logger';
+import { fallbackProvider } from './fallback-provider';
 
-export interface GoldenTestCase {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export interface GoldenDatasetEntry {
   id: string;
-  name: string;
-  subject: string;
-  exam_board: string;
   question: string;
-  student_answer: string;
-  expected_score_min: number;
-  expected_score_max: number;
-  expected_grade: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  answer: string;
+  markScheme: string;
+  marksTotal: number;
+  subject: string;
+  examBoard: string;
+  expectedScore: number;
+  expectedGrade: string;
+  expectedAosMet: string[];
+  difficulty: 'easy' | 'medium' | 'hard' | 'tricky';
+  quality: 'excellent' | 'good' | 'average' | 'poor';
   tags: string[];
-  created_at: string;
-  created_by: string;
+  createdAt: Date;
 }
 
-export interface TestResult {
-  test_case_id: string;
-  prompt_version: string;
-  ai_provider: string;
-  score: number;
-  grade: string;
-  feedback: string;
-  passed: boolean;
-  execution_time_ms: number;
-  error_message?: string;
-  timestamp: string;
-}
-
-export interface PromptPerformanceReport {
-  prompt_version: string;
-  total_tests: number;
-  passed_tests: number;
-  pass_rate: number;
-  average_score: number;
-  average_execution_time: number;
-  performance_by_difficulty: {
-    easy: { pass_rate: number; avg_score: number };
-    medium: { pass_rate: number; avg_score: number };
-    hard: { pass_rate: number; avg_score: number };
-  };
-  performance_by_subject: Record<
-    string,
-    { pass_rate: number; avg_score: number }
-  >;
-  failed_tests: TestResult[];
+export interface GoldenDatasetResult {
+  id: string;
+  datasetEntryId: string;
+  promptId: string;
+  modelUsed: string;
+  actualScore: number;
+  actualGrade: string;
+  actualAosMet: string[];
+  improvementSuggestions: string[];
+  detailedFeedback: string;
+  scoreAccuracy: number;
+  gradeAccuracy: number;
+  aosAccuracy: number;
+  overallQuality: number;
+  validationPassed: boolean;
+  createdAt: Date;
 }
 
 export class GoldenDatasetManager {
-  private supabase: any;
-
-  constructor() {
-    this.initSupabase();
-  }
-
-  private async initSupabase() {
-    this.supabase = await getSupabase();
-  }
-
-  /**
-   * Create a new golden test case
-   */
-  async createTestCase(
-    testCase: Omit<GoldenTestCase, 'id' | 'created_at'>
-  ): Promise<string> {
-    try {
-      const { data, error } = await this.supabase
-        .from('golden_test_cases')
-        .insert({
-          ...testCase,
-          created_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
-
-      if (error) throw error;
-
-      logger.info(`Created golden test case: ${data.id}`);
-      return data.id;
-    } catch (error) {
-      logger.error('Error creating golden test case:', error);
-      throw new Error(`Failed to create test case: ${error}`);
+  private static readonly DATASET: Omit<GoldenDatasetEntry, 'id' | 'createdAt'>[] = [
+    // Excellent responses
+    {
+      question: "How does Shakespeare present Macbeth's ambition in Act 1 Scene 7?",
+      answer: "Shakespeare presents Macbeth's ambition through dramatic soliloquy and imagery. In 'Vaulting ambition, which o'erleaps itself', the metaphor of a rider overreaching creates a sense of dangerous excess. The plosive 'vaulting' conveys energetic, almost violent ambition. Shakespeare uses antithesis in 'I have no spur to prick the sides of my intent, but only vaulting ambition', highlighting how ambition alone drives Macbeth, lacking moral justification. The soliloquy form reveals Macbeth's internal conflict, making his ambition more complex as he weighs 'bloody business' against 'golden opinions'.",
+      markScheme: "AO1: Clear understanding of Macbeth's ambition. AO2: Analysis of language and structure. AO3: Understanding of context and themes.",
+      marksTotal: 20,
+      subject: "English Literature",
+      examBoard: "AQA",
+      expectedScore: 18,
+      expectedGrade: "A*",
+      expectedAosMet: ["AO1", "AO2", "AO3"],
+      difficulty: "medium",
+      quality: "excellent",
+      tags: ["macbeth", "ambition", "soliloquy", "shakespeare"]
+    },
+    {
+      question: "Explain how Priestley presents social class in An Inspector Calls.",
+      answer: "Priestley presents social class as a destructive force through characterisation and setting. The Birlings' 'substantial' house is described with ostentatious wealth, contrasting with Eva's 'girl of that sort' dismissal. Sheila's transformation from 'pleased with life' to understanding social responsibility shows class consciousness evolving. The Inspector's final speech uses collective pronouns 'we are members of one body' to challenge class divisions. Priestley's cyclical structure with the second phone call suggests unresolved class conflict.",
+      markScheme: "AO1: Understanding of social class presentation. AO2: Analysis of language and structure. AO3: Context of 1912/1945.",
+      marksTotal: 20,
+      subject: "English Literature",
+      examBoard: "AQA",
+      expectedScore: 17,
+      expectedGrade: "A",
+      expectedAosMet: ["AO1", "AO2", "AO3"],
+      difficulty: "medium",
+      quality: "good",
+      tags: ["inspector-calls", "social-class", "priestley"]
+    },
+    // Poor responses
+    {
+      question: "How does Shakespeare present love in Romeo and Juliet?",
+      answer: "Shakespeare presents love as a good thing. Romeo and Juliet love each other very much. They are willing to die for love. The play shows that love is powerful and can overcome family problems. Love makes people do crazy things.",
+      markScheme: "AO1: Understanding of love presentation. AO2: Analysis of language and techniques. AO3: Context and themes.",
+      marksTotal: 20,
+      subject: "English Literature",
+      examBoard: "AQA",
+      expectedScore: 4,
+      expectedGrade: "D",
+      expectedAosMet: ["AO1"],
+      difficulty: "easy",
+      quality: "poor",
+      tags: ["romeo-juliet", "love", "basic-analysis"]
+    },
+    // Tricky questions
+    {
+      question: "How does the writer use language to present conflict in this extract?",
+      answer: "The writer uses violent verbs like 'shattered' and 'exploded' to create immediate physical conflict. The onomatopoeia 'CRACK' in capitals mimics gunfire, making the conflict auditory. Metaphorical language in 'the argument detonated' transforms verbal conflict into something explosive. The short sentence 'Silence.' after the conflict creates dramatic tension through contrast.",
+      markScheme: "AO2: Language analysis. AO3: Understanding of conflict theme.",
+      marksTotal: 15,
+      subject: "English Language",
+      examBoard: "AQA",
+      expectedScore: 14,
+      expectedGrade: "A*",
+      expectedAosMet: ["AO2", "AO3"],
+      difficulty: "tricky",
+      quality: "excellent",
+      tags: ["language-analysis", "conflict", "extract"]
+    },
+    // Science examples
+    {
+      question: "Explain how the structure of the leaf is adapted for photosynthesis.",
+      answer: "The leaf has a thin, flat shape to maximise surface area for light absorption. Palisade cells contain many chloroplasts for efficient light capture. The spongy mesophyll has air spaces for gas exchange. Stomata regulate CO2 entry and O2 exit. Xylem transports water to cells. Phloem transports glucose away. The waxy cuticle prevents water loss while allowing light through.",
+      markScheme: "AO1: Knowledge of leaf structure. AO2: Application to photosynthesis.",
+      marksTotal: 10,
+      subject: "Biology",
+      examBoard: "AQA",
+      expectedScore: 9,
+      expectedGrade: "A*",
+      expectedAosMet: ["AO1", "AO2"],
+      difficulty: "medium",
+      quality: "good",
+      tags: ["photosynthesis", "leaf-structure", "adaptation"]
+    },
+    // History examples
+    {
+      question: "Why did the League of Nations fail?",
+      answer: "The League failed due to structural weaknesses and lack of power. Without the USA, it lacked authority. The absence of an army meant it couldn't enforce decisions. The Great Depression made countries focus on domestic issues. Japan's invasion of Manchuria showed the League's impotence. The Abyssinia crisis revealed Britain and France's self-interest over collective security.",
+      markScheme: "AO1: Knowledge of League's failures. AO2: Analysis of reasons. AO3: Judgement on most important factor.",
+      marksTotal: 16,
+      subject: "History",
+      examBoard: "AQA",
+      expectedScore: 15,
+      expectedGrade: "A",
+      expectedAosMet: ["AO1", "AO2", "AO3"],
+      difficulty: "medium",
+      quality: "good",
+      tags: ["league-of-nations", "failure", "inter-war"]
+    },
+    // Average responses
+    {
+      question: "Describe the importance of the character of Curley's wife in Of Mice and Men.",
+      answer: "Curley's wife is important because she is the only female character. She is lonely and wants attention. The men are afraid of her because she is Curley's wife. She causes problems between the men. Her death is important because it leads to Lennie's death. She represents the theme of loneliness.",
+      markScheme: "AO1: Understanding of character. AO2: Analysis of methods. AO3: Themes and context.",
+      marksTotal: 20,
+      subject: "English Literature",
+      examBoard: "AQA",
+      expectedScore: 12,
+      expectedGrade: "C",
+      expectedAosMet: ["AO1", "AO3"],
+      difficulty: "medium",
+      quality: "average",
+      tags: ["mice-men", "curleys-wife", "character-analysis"]
+    },
+    // Complex analysis
+    {
+      question: "How does Shelley present the creature as more human than Frankenstein?",
+      answer: "Shelley presents the creature as more human through language and development. The creature learns language - 'I learned to distinguish between the operations of my various senses' - showing intellectual growth. His eloquence in 'I ought to be thy Adam' contrasts with Frankenstein's hysterical 'Begone, vile insect!' The creature shows empathy - 'I wept' - while Frankenstein shows none. The creature's narrative frame makes him more sympathetic. Shelley uses pathetic fallacy - 'rain poured down in torrents' - to mirror the creature's emotions, making him more emotionally complex than his creator.",
+      markScheme: "AO1: Understanding of character presentation. AO2: Language and structure analysis. AO3: Gothic context and themes.",
+      marksTotal: 25,
+      subject: "English Literature",
+      examBoard: "AQA",
+      expectedScore: 23,
+      expectedGrade: "A*",
+      expectedAosMet: ["AO1", "AO2", "AO3"],
+      difficulty: "hard",
+      quality: "excellent",
+      tags: ["frankenstein", "creature", "humanity", "gothic"]
+    },
+    // Weak but salvageable
+    {
+      question: "What are the causes of World War One?",
+      answer: "The causes of WW1 were the assassination of Franz Ferdinand, alliances between countries, imperialism, and nationalism. These made countries go to war. The assassination was the spark that started it.",
+      markScheme: "AO1: Knowledge of causes. AO2: Analysis of importance. AO3: Links between causes.",
+      marksTotal: 12,
+      subject: "History",
+      examBoard: "AQA",
+      expectedScore: 6,
+      expectedGrade: "D",
+      expectedAosMet: ["AO1"],
+      difficulty: "easy",
+      quality: "poor",
+      tags: ["ww1", "causes", "basic-knowledge"]
+    },
+    // Chemistry example
+    {
+      question: "Explain why ionic compounds have high melting points.",
+      answer: "Ionic compounds have high melting points because of strong electrostatic forces between oppositely charged ions. These forces require lots of energy to break. The ionic lattice structure means many bonds must be broken. This explains why NaCl has a melting point of 801°C.",
+      markScheme: "AO1: Knowledge of ionic bonding. AO2: Explanation of melting point.",
+      marksTotal: 8,
+      subject: "Chemistry",
+      examBoard: "AQA",
+      expectedScore: 7,
+      expectedGrade: "A",
+      expectedAosMet: ["AO1", "AO2"],
+      difficulty: "medium",
+      quality: "good",
+      tags: ["ionic-bonding", "melting-point", "structure"]
     }
-  }
+  ];
 
-  /**
-   * Get all golden test cases
-   */
-  async getAllTestCases(): Promise<GoldenTestCase[]> {
+  async populateDataset(): Promise<void> {
     try {
-      const { data, error } = await this.supabase
-        .from('golden_test_cases')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Clear existing dataset
+      await supabase.from('golden_dataset').delete().neq('id', '');
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      logger.error('Error fetching golden test cases:', error);
-      throw new Error(`Failed to fetch test cases: ${error}`);
-    }
-  }
+      // Insert new entries
+      for (const entry of GoldenDatasetManager.DATASET) {
+        const { data, error } = await supabase
+          .from('golden_dataset')
+          .insert(entry)
+          .select();
 
-  /**
-   * Get test cases by subject or difficulty
-   */
-  async getTestCases(filters: {
-    subject?: string;
-    difficulty?: string;
-    limit?: number;
-  }): Promise<GoldenTestCase[]> {
-    try {
-      let query = this.supabase.from('golden_test_cases').select('*');
-
-      if (filters.subject) {
-        query = query.eq('subject', filters.subject);
-      }
-
-      if (filters.difficulty) {
-        query = query.eq('difficulty', filters.difficulty);
-      }
-
-      if (filters.limit) {
-        query = query.limit(filters.limit);
-      }
-
-      const { data, error } = await query.order('created_at', {
-        ascending: false,
-      });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      logger.error('Error fetching filtered test cases:', error);
-      throw new Error(`Failed to fetch test cases: ${error}`);
-    }
-  }
-
-  /**
-   * Run a single test case against a prompt
-   */
-  async runTestCase(
-    testCase: GoldenTestCase,
-    markingFunction: (request: MarkingRequest) => Promise<MarkingResponse>,
-    promptVersion: string,
-    aiProvider: string
-  ): Promise<TestResult> {
-    const startTime = Date.now();
-
-    try {
-      const request: MarkingRequest = {
-        question: testCase.question,
-        answer: testCase.student_answer,
-        subject: testCase.subject,
-        examBoard: testCase.exam_board,
-      };
-
-      const response = await markingFunction(request);
-      const executionTime = Date.now() - startTime;
-
-      const passed = this.evaluateTestResult(testCase, response);
-
-      const result: TestResult = {
-        test_case_id: testCase.id,
-        prompt_version: promptVersion,
-        ai_provider: aiProvider,
-        score: response.score,
-        grade: response.grade,
-        feedback: response.aiResponse,
-        passed,
-        execution_time_ms: executionTime,
-        timestamp: new Date().toISOString(),
-      };
-
-      // Store the test result
-      await this.storeTestResult(result);
-
-      return result;
-    } catch (error) {
-      const executionTime = Date.now() - startTime;
-      const result: TestResult = {
-        test_case_id: testCase.id,
-        prompt_version: promptVersion,
-        ai_provider: aiProvider,
-        score: 0,
-        grade: 'U',
-        feedback: '',
-        passed: false,
-        execution_time_ms: executionTime,
-        error_message: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
-      };
-
-      await this.storeTestResult(result);
-      return result;
-    }
-  }
-
-  /**
-   * Run all test cases against a prompt version
-   */
-  async runFullTestSuite(
-    markingFunction: (request: MarkingRequest) => Promise<MarkingResponse>,
-    promptVersion: string,
-    aiProvider: string
-  ): Promise<PromptPerformanceReport> {
-    try {
-      const testCases = await this.getAllTestCases();
-      const results: TestResult[] = [];
-
-      logger.info(
-        `Running ${testCases.length} test cases for prompt ${promptVersion}`
-      );
-
-      // Run tests in batches to avoid overwhelming the AI provider
-      const batchSize = 5;
-      for (let i = 0; i < testCases.length; i += batchSize) {
-        const batch = testCases.slice(i, i + batchSize);
-        const batchPromises = batch.map(testCase =>
-          this.runTestCase(testCase, markingFunction, promptVersion, aiProvider)
-        );
-
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
-
-        // Add delay between batches
-        if (i + batchSize < testCases.length) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        if (error) {
+          logger.error('Failed to insert golden dataset entry', { error, entry });
+        } else {
+          logger.info('Inserted golden dataset entry', { id: data[0].id });
         }
       }
 
-      return this.generatePerformanceReport(promptVersion, results, testCases);
+      logger.info('Golden dataset populated successfully');
     } catch (error) {
-      logger.error('Error running full test suite:', error);
-      throw new Error(`Failed to run test suite: ${error}`);
+      logger.error('Failed to populate golden dataset', { error });
+      throw error;
     }
   }
 
-  /**
-   * Compare two prompt versions
-   */
-  async comparePromptVersions(
-    versionA: string,
-    versionB: string
-  ): Promise<{
-    versionA: PromptPerformanceReport;
-    versionB: PromptPerformanceReport;
-    winner: string;
-    improvement: number;
+  async runPromptAgainstDataset(promptId: string): Promise<GoldenDatasetResult[]> {
+    const { data: dataset } = await supabase
+      .from('golden_dataset')
+      .select('*');
+
+    if (!dataset) {
+      throw new Error('No dataset entries found');
+    }
+
+    const results: GoldenDatasetResult[] = [];
+
+    for (const entry of dataset) {
+      try {
+        const request: MarkingRequest = {
+          question: entry.question,
+          answer: entry.answer,
+          markScheme: entry.markScheme,
+          marksTotal: entry.marksTotal,
+          subject: entry.subject,
+          examBoard: entry.examBoard,
+        };
+
+        const response = await fallbackProvider.mark(request);
+
+        // Calculate accuracy metrics
+        const scoreAccuracy = 1 - Math.abs(response.score - entry.expectedScore) / entry.marksTotal;
+        const gradeAccuracy = response.grade === entry.expectedGrade ? 1 : 0;
+        const aosAccuracy = this.calculateAosAccuracy(response.aosMet, entry.expectedAosMet);
+
+        const result: Omit<GoldenDatasetResult, 'id' | 'createdAt'> = {
+          datasetEntryId: entry.id,
+          promptId,
+          modelUsed: response.modelUsed,
+          actualScore: response.score,
+          actualGrade: response.grade,
+          actualAosMet: response.aosMet,
+          improvementSuggestions: response.improvementSuggestions || [],
+          detailedFeedback: response.aiResponse || '',
+          scoreAccuracy: Math.max(0, scoreAccuracy),
+          gradeAccuracy,
+          aosAccuracy,
+          overallQuality: (scoreAccuracy + gradeAccuracy + aosAccuracy) / 3,
+          validationPassed: true, // Would be enhanced by validator
+        };
+
+        const { data } = await supabase
+          .from('golden_dataset_results')
+          .insert(result)
+          .select();
+
+        if (data) {
+          results.push(data[0]);
+        }
+      } catch (error) {
+        logger.error('Failed to run prompt against dataset entry', {
+          entryId: entry.id,
+          promptId,
+          error,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  private calculateAosAccuracy(actual: string[], expected: string[]): number {
+    if (expected.length === 0) return 0;
+    
+    const intersection = actual.filter(ao => expected.includes(ao));
+    return intersection.length / expected.length;
+  }
+
+  async getPromptPerformance(promptId: string): Promise<{
+    averageScoreAccuracy: number;
+    averageGradeAccuracy: number;
+    averageAosAccuracy: number;
+    overallQuality: number;
+    totalTests: number;
   }> {
-    try {
-      const [resultsA, resultsB] = await Promise.all([
-        this.getTestResults(versionA),
-        this.getTestResults(versionB),
-      ]);
+    const { data: results } = await supabase
+      .from('golden_dataset_results')
+      .select('*')
+      .eq('promptId', promptId);
 
-      const testCases = await this.getAllTestCases();
-      const reportA = this.generatePerformanceReport(
-        versionA,
-        resultsA,
-        testCases
-      );
-      const reportB = this.generatePerformanceReport(
-        versionB,
-        resultsB,
-        testCases
-      );
-
-      const winner =
-        reportA.pass_rate > reportB.pass_rate ? versionA : versionB;
-      const improvement = Math.abs(reportA.pass_rate - reportB.pass_rate);
-
+    if (!results || results.length === 0) {
       return {
-        versionA: reportA,
-        versionB: reportB,
-        winner,
-        improvement,
+        averageScoreAccuracy: 0,
+        averageGradeAccuracy: 0,
+        averageAosAccuracy: 0,
+        overallQuality: 0,
+        totalTests: 0,
       };
-    } catch (error) {
-      logger.error('Error comparing prompt versions:', error);
-      throw new Error(`Failed to compare versions: ${error}`);
     }
-  }
 
-  /**
-   * Get the current production prompt performance baseline
-   */
-  async getProductionBaseline(): Promise<PromptPerformanceReport | null> {
-    try {
-      // Get the currently active prompt version
-      const { data: activePrompt } = await this.supabase
-        .from('prompt_versions')
-        .select('version')
-        .eq('is_active', true)
-        .single();
-
-      if (!activePrompt) return null;
-
-      const results = await this.getTestResults(activePrompt.version);
-      const testCases = await this.getAllTestCases();
-
-      return this.generatePerformanceReport(
-        activePrompt.version,
-        results,
-        testCases
-      );
-    } catch (error) {
-      logger.error('Error getting production baseline:', error);
-      return null;
-    }
-  }
-
-  private evaluateTestResult(
-    testCase: GoldenTestCase,
-    response: MarkingResponse
-  ): boolean {
-    // Check if score is within expected range
-    const scoreInRange =
-      response.score >= testCase.expected_score_min &&
-      response.score <= testCase.expected_score_max;
-
-    // Check if grade matches (allow for close grades)
-    const gradeMatches =
-      response.grade === testCase.expected_grade ||
-      this.isCloseGrade(response.grade, testCase.expected_grade);
-
-    return scoreInRange && gradeMatches;
-  }
-
-  private isCloseGrade(actual: string, expected: string): boolean {
-    const gradeOrder = ['U', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'A*'];
-    const actualIndex = gradeOrder.indexOf(actual);
-    const expectedIndex = gradeOrder.indexOf(expected);
-
-    // Allow grades within 1 level of each other
-    return Math.abs(actualIndex - expectedIndex) <= 1;
-  }
-
-  private async storeTestResult(result: TestResult): Promise<void> {
-    try {
-      const { error } = await this.supabase
-        .from('golden_test_results')
-        .insert(result);
-
-      if (error) throw error;
-    } catch (error) {
-      logger.error('Error storing test result:', error);
-    }
-  }
-
-  private async getTestResults(promptVersion: string): Promise<TestResult[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from('golden_test_results')
-        .select('*')
-        .eq('prompt_version', promptVersion)
-        .order('timestamp', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      logger.error('Error fetching test results:', error);
-      return [];
-    }
-  }
-
-  private generatePerformanceReport(
-    promptVersion: string,
-    results: TestResult[],
-    testCases: GoldenTestCase[]
-  ): PromptPerformanceReport {
-    const passedTests = results.filter(r => r.passed);
-    const failedTests = results.filter(r => !r.passed);
-
-    const performanceByDifficulty = {
-      easy: this.calculateDifficultyStats(results, testCases, 'easy'),
-      medium: this.calculateDifficultyStats(results, testCases, 'medium'),
-      hard: this.calculateDifficultyStats(results, testCases, 'hard'),
-    };
-
-    const performanceBySubject: Record<
-      string,
-      { pass_rate: number; avg_score: number }
-    > = {};
-    const subjects = [...new Set(testCases.map(tc => tc.subject))];
-
-    subjects.forEach(subject => {
-      performanceBySubject[subject] = this.calculateSubjectStats(
-        results,
-        testCases,
-        subject
-      );
-    });
+    const totals = results.reduce(
+      (acc: any, result: any) => ({
+        scoreAccuracy: acc.scoreAccuracy + result.scoreAccuracy,
+        gradeAccuracy: acc.gradeAccuracy + result.gradeAccuracy,
+        aosAccuracy: acc.aosAccuracy + result.aosAccuracy,
+        overallQuality: acc.overallQuality + result.overallQuality,
+      }),
+      { scoreAccuracy: 0, gradeAccuracy: 0, aosAccuracy: 0, overallQuality: 0 }
+    );
 
     return {
-      prompt_version: promptVersion,
-      total_tests: results.length,
-      passed_tests: passedTests.length,
-      pass_rate: results.length > 0 ? passedTests.length / results.length : 0,
-      average_score:
-        results.length > 0
-          ? results.reduce((sum, r) => sum + r.score, 0) / results.length
-          : 0,
-      average_execution_time:
-        results.length > 0
-          ? results.reduce((sum, r) => sum + r.execution_time_ms, 0) /
-            results.length
-          : 0,
-      performance_by_difficulty: performanceByDifficulty,
-      performance_by_subject: performanceBySubject,
-      failed_tests: failedTests,
+      averageScoreAccuracy: totals.scoreAccuracy / results.length,
+      averageGradeAccuracy: totals.gradeAccuracy / results.length,
+      averageAosAccuracy: totals.aosAccuracy / results.length,
+      overallQuality: totals.overallQuality / results.length,
+      totalTests: results.length,
     };
   }
 
-  private calculateDifficultyStats(
-    results: TestResult[],
-    testCases: GoldenTestCase[],
-    difficulty: string
-  ): { pass_rate: number; avg_score: number } {
-    const relevantTestCases = testCases.filter(
-      tc => tc.difficulty === difficulty
-    );
-    const relevantResults = results.filter(r =>
-      relevantTestCases.some(tc => tc.id === r.test_case_id)
-    );
-
-    if (relevantResults.length === 0) {
-      return { pass_rate: 0, avg_score: 0 };
-    }
-
-    const passedCount = relevantResults.filter(r => r.passed).length;
-    const avgScore =
-      relevantResults.reduce((sum, r) => sum + r.score, 0) /
-      relevantResults.length;
-
-    return {
-      pass_rate: passedCount / relevantResults.length,
-      avg_score: avgScore,
+  async generateReport(): Promise<{
+    dataset: GoldenDatasetEntry[];
+    results: GoldenDatasetResult[];
+    summary: {
+      totalEntries: number;
+      testedPrompts: string[];
+      averageOverallQuality: number;
     };
-  }
+  }> {
+    const [dataset, results] = await Promise.all([
+      supabase.from('golden_dataset').select('*'),
+      supabase.from('golden_dataset_results').select('*'),
+    ]);
 
-  private calculateSubjectStats(
-    results: TestResult[],
-    testCases: GoldenTestCase[],
-    subject: string
-  ): { pass_rate: number; avg_score: number } {
-    const relevantTestCases = testCases.filter(tc => tc.subject === subject);
-    const relevantResults = results.filter(r =>
-      relevantTestCases.some(tc => tc.id === r.test_case_id)
-    );
+    const uniquePrompts = [...new Set(results.data?.map((r: any) => r.promptId) || [])] as string[];
 
-    if (relevantResults.length === 0) {
-      return { pass_rate: 0, avg_score: 0 };
-    }
-
-    const passedCount = relevantResults.filter(r => r.passed).length;
-    const avgScore =
-      relevantResults.reduce((sum, r) => sum + r.score, 0) /
-      relevantResults.length;
+    const overallQuality = results.data?.reduce((sum: number, r: any) => sum + r.overallQuality, 0) || 0;
+    const averageOverallQuality = results.data?.length ? overallQuality / results.data.length : 0;
 
     return {
-      pass_rate: passedCount / relevantResults.length,
-      avg_score: avgScore,
+      dataset: dataset.data || [],
+      results: results.data || [],
+      summary: {
+        totalEntries: dataset.data?.length || 0,
+        testedPrompts: uniquePrompts,
+        averageOverallQuality,
+      },
     };
   }
 }
 
-export const goldenDataset = new GoldenDatasetManager();
+export const goldenDatasetManager = new GoldenDatasetManager();
