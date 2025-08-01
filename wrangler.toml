@@ -53,15 +53,9 @@ OCR_SERVICE_ENDPOINT = "https://ocr.aimarker.tech"  # Cloudflare Tunnel endpoint
 # Required secrets:
 # - NEXT_PUBLIC_SUPABASE_ANON_KEY
 # - SUPABASE_SERVICE_ROLE_KEY
-# - DATABASE_URL
-# - STACK_SECRET_SERVER_KEY
-# - UPSTASH_REDIS_REST_URL
-# - UPSTASH_REDIS_REST_TOKEN
 # - OPENROUTER_API_KEY
-# - STRIPE_SECRET_KEY
-# - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-# - OCR_SERVICE_API_KEY  # New secret for OCR service authentication
-# - SENTRY_DSN (optional)
-# - SENTRY_AUTH_TOKEN (optional)
+# - OCR_TUNNEL_CLIENT_ID
+# - OCR_TUNNEL_CLIENT_SECRET
+# - OCR_TUNNEL_TOKEN
 #
 # Set secrets using: wrangler secret put SECRET_NAME

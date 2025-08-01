@@ -7,12 +7,12 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
-  STRIPE_WEBHOOK_SECRET: string;
   OPENAI_API_KEY: string;
   GOOGLE_AI_API_KEY: string;
-  STACK_SECRET_SERVER_KEY: string;
-  UPSTASH_REDIS_REST_URL: string;
-  UPSTASH_REDIS_REST_TOKEN: string;
+  OPENROUTER_API_KEY: string;
+  OCR_TUNNEL_CLIENT_ID: string;
+  OCR_TUNNEL_CLIENT_SECRET: string;
+  OCR_TUNNEL_TOKEN: string;
 }
 
 // Enhanced rate limiting using Workers KV

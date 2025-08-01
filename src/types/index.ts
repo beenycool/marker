@@ -1,89 +1,6 @@
-export type User = {
-  id: string;
-  email: string;
-  role: 'STUDENT' | 'ADMIN';
-  subscriptionTier: 'FREE' | 'PRO';
-  onboardingCompleted: boolean;
-  yearGroup: string | null;
-  subjects: string[];
-  examBoards: any | null;
-  studyGoals: string[];
-  preferredStudyTime: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type Tier = 'FREE' | 'PRO';
-
-export type Submission = {
-  id: string;
-  userId: string;
-  question: string;
-  answer: string;
-  markScheme: string | null;
-  marksTotal: number | null;
-  subject: string | null;
-  examBoard: string | null;
-  subjectCode: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type Feedback = {
-  id: string;
-  submissionId: string;
-  aiResponse: string;
-  score: number;
-  grade: string;
-  aosMet: string[];
-  improvementSuggestions: string[];
-  modelUsed: string;
-  gradeBoundaries: any | null;
-  createdAt: Date;
-};
-
-export type Analytics = {
-  id: string;
-  userId: string;
-  date: Date;
-  submissionsCount: number;
-  avgScore: number | null;
-  subjectBreakdown: any | null;
-  createdAt: Date;
-};
-
-export type PastPaper = {
-  id: string;
-  title: string;
-  questions: any;
-  subject: string;
-  year: number;
-  examBoard: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type UsageTracking = {
-  id: string;
-  userId: string;
-  date: Date;
-  apiCallsUsed: number;
-  tier: Tier;
-  createdAt: Date;
-};
-
-export type Subscription = {
-  id: string;
-  userId: string;
-  stripeSubscriptionId: string | null;
-  stripeCustomerId: string | null;
-  status: 'ACTIVE' | 'INACTIVE' | 'CANCELED' | 'PAST_DUE';
-  currentPeriodStart: Date | null;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
+/**
+ * Anonymous-first types. All user/account/subscription constructs removed.
+ */
 
 export interface MarkingRequest {
   question: string;
@@ -110,8 +27,19 @@ export interface UsageStats {
   canUse: boolean;
 }
 
+/**
+ * Dashboard data for local-only analytics (session-scoped).
+ */
 export interface DashboardData {
-  recentSubmissions: any[];
+  recentSubmissions: Array<{
+    id: string;
+    question: string;
+    subject: string | null;
+    examBoard: string | null;
+    createdAt: string;
+    score: number;
+    grade: string;
+  }>;
   analytics: {
     totalSubmissions: number;
     averageScore: number;
@@ -121,6 +49,9 @@ export interface DashboardData {
   usageStats: UsageStats;
 }
 
+/**
+ * Past paper shapes independent of accounts.
+ */
 export interface PastPaperQuestion {
   id: string;
   question: string;
@@ -129,20 +60,24 @@ export interface PastPaperQuestion {
   topic?: string;
 }
 
-export interface PastPaperAttempt {
+/**
+ * Minimal PastPaper representation used by the Past Papers feature.
+ */
+export interface PastPaper {
   id: string;
-  paperId: string;
-  answers: Record<string, string>;
-  startedAt: Date;
-  completedAt?: Date;
-  score?: number;
-  feedback?: Record<string, MarkingResponse>;
+  title: string;
+  questions: any[];
+  subject: string;
+  year: number;
+  examBoard: string;
 }
 
+/**
+ * AI Provider availability without subscription tiers.
+ */
 export interface AIProvider {
   name: string;
   model: string;
-  tier: 'free' | 'pro';
   available: boolean;
 }
 

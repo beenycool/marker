@@ -1,9 +1,37 @@
-flask==3.0.0
-flask-cors==6.0.1
-easyocr==1.7.1
-pillow==11.3.0
-numpy==1.24.3
-opencv-python-headless==4.8.1.78
-torch==2.7.1
-torchvision==0.18.0
+# AIMARKER OCR Service Dependencies
+# GDPR-compliant TrOCR service with Cloudflare Tunnel security
+# Generated from requirements.in - use `pip-compile requirements.in` to update
+
+# Core web framework
+Flask==3.0.3
+Werkzeug==3.0.3
+
+# Rate limiting and security
+Flask-Limiter==3.8.0
+limits==3.13.0
+
+# TrOCR and ML dependencies
+transformers==4.44.2
+torch==2.4.1
+torchvision==0.19.1
+Pillow==10.4.0
+numpy==1.26.4
+
+# Additional ML dependencies (auto-resolved by transformers)
+tokenizers==0.19.1
+safetensors==0.4.4
+huggingface-hub==0.24.6
+filelock==3.16.1
+packaging==24.1
+pyyaml==6.0.2
+regex==2024.7.24
+requests==2.32.3
+tqdm==4.66.5
+
+# Production WSGI server
 gunicorn==23.0.0
+
+# Utilities and security
+python-dotenv==1.0.1
+cryptography==43.0.1
+psutil==6.0.0

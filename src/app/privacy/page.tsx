@@ -120,13 +120,26 @@ export default function PrivacyPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">Data Controller</h2>
               <p className="text-gray-300 mb-4">
-                For any privacy-related questions, you can contact us. However, since we operate 
-                on a no-storage principle, most traditional data requests don't apply.
+                For any privacy-related questions or GDPR compliance inquiries, please contact:
+              </p>
+              <div className="text-gray-300 mb-4">
+                <p className="mb-2"><strong>Email:</strong> <a href="mailto:support@aimarker.tech" className="text-blue-400 hover:text-blue-300">support@aimarker.tech</a></p>
+                <p className="mb-2"><strong>Postal Address:</strong></p>
+                <address className="not-italic ml-4">
+                  AI Marker<br />
+                  123 Tech Street<br />
+                  London<br />
+                  EC1A 1BB<br />
+                  United Kingdom
+                </address>
+              </div>
+              <p className="text-gray-300">
+                However, since we operate on a no-storage principle, most traditional data requests don't apply.
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibent text-white mb-4">Changes to This Policy</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4">Changes to This Policy</h2>
               <p className="text-gray-300 mb-4">
                 We may update this privacy policy to reflect changes in our practices or legal requirements. 
                 Any changes will be posted on this page.
