@@ -142,3 +142,8 @@ docker-compose.override.yml
 ocr-service/__pycache__/
 ocr-service/*.pyc
 ocr-service/pytorch_update.log
+ocr-service/venv.tar.gz
+*.tar.gz
+*.zip
+*.rar
+*.7z
