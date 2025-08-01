@@ -4,17 +4,14 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for OpenCV and EasyOCR
+# Install system dependencies for TrOCR and PyTorch
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender-dev \
     libgomp1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
     libgl1-mesa-glx \
-    libglib2.0-0 \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
@@ -31,9 +28,9 @@ RUN useradd --create-home --shell /bin/bash ocr && \
 # Copy application code
 COPY app.py .
 
-# Create directories for EasyOCR models
-RUN mkdir -p /home/ocr/.EasyOCR && \
-    chown -R ocr:ocr /home/ocr/.EasyOCR
+# Create directories for HuggingFace models cache
+RUN mkdir -p /home/ocr/.cache/huggingface && \
+    chown -R ocr:ocr /home/ocr/.cache
 
 # Switch to non-root user
 USER ocr

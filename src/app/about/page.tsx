@@ -4,7 +4,6 @@ import { UnifiedFeatures } from '@/components/landing/unified-features';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { StudentExperience } from '@/components/landing/student-experience';
 import { SampleQuestions } from '@/components/landing/sample-questions';
-import { Waitlist } from '@/components/landing/waitlist';
 import { FAQ } from '@/components/landing/faq';
 import { Footer } from '@/components/landing/footer';
 
@@ -23,7 +22,6 @@ export default function AboutPage() {
       <div id="sample-questions">
         <SampleQuestions />
       </div>
-      <Waitlist />
       <div id="faq">
         <FAQ />
       </div>

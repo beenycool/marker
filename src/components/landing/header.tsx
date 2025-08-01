@@ -5,17 +5,17 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
-import { useAuth } from '@/components/providers/auth-provider';
 
 const navLinks = [
   { name: 'Features', href: '#features' },
   { name: 'How it Works', href: '#how-it-works' },
+  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'Pricing', href: '#pricing' },
   { name: 'FAQ', href: '#faq' },
 ];
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
 
   return (
     <header className="fixed top-0 w-full z-50 bg-white/5 backdrop-blur-sm border-b border-white/10">
@@ -44,6 +44,7 @@ export function Header() {
                 <Link
                   href={link.href}
                   className="text-gray-300 hover:text-white transition-colors"
+                  data-tour={link.name === 'Dashboard' ? 'dashboard-link' : undefined}
                 >
                   {link.name}
                 </Link>
@@ -51,47 +52,23 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Auth Buttons */}
+          {/* Anonymous Actions */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
             className="hidden md:flex items-center space-x-4"
           >
-            {user ? (
-              <>
-                <Link href="/dashboard">
-                  <Button variant="ghost" className="text-white">
-                    Dashboard
-                  </Button>
-                </Link>
-                <Link href="/settings">
-                  <Button variant="ghost" className="text-white">
-                    Account
-                  </Button>
-                </Link>
-                <Button
-                  variant="ghost"
-                  className="text-white"
-                  onClick={() => signOut()}
-                >
-                  Sign Out
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/sign-in">
-                  <Button variant="ghost" className="text-white">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/auth/sign-up">
-                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">
-                    Get Started
-                  </Button>
-                </Link>
-              </>
-            )}
+            <Link href="/privacy">
+              <Button variant="ghost" className="text-white">
+                Privacy
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                Start Marking
+              </Button>
+            </Link>
           </motion.div>
 
           {/* Mobile Menu Button */}
@@ -123,40 +100,16 @@ export function Header() {
                 </Link>
               ))}
               <div className="flex flex-col space-y-2 pt-4 border-t border-white/10">
-                {user ? (
-                  <>
-                    <Link href="/dashboard">
-                      <Button variant="ghost" className="text-white w-full">
-                        Dashboard
-                      </Button>
-                    </Link>
-                    <Link href="/settings">
-                      <Button variant="ghost" className="text-white w-full">
-                        Account
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      className="text-white w-full"
-                      onClick={() => signOut()}
-                    >
-                      Sign Out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/auth/sign-in">
-                      <Button variant="ghost" className="text-white w-full">
-                        Sign In
-                      </Button>
-                    </Link>
-                    <Link href="/auth/sign-up">
-                      <Button className="bg-blue-500 hover:bg-blue-600 text-white w-full">
-                        Get Started
-                      </Button>
-                    </Link>
-                  </>
-                )}
+                <Link href="/privacy">
+                  <Button variant="ghost" className="text-white w-full">
+                    Privacy
+                  </Button>
+                </Link>
+                <Link href="/">
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white w-full">
+                    Start Marking
+                  </Button>
+                </Link>
               </div>
             </nav>
           </motion.div>

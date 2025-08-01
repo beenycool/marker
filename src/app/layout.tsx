@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { AuthProvider } from '@/components/providers/auth-provider';
 import { clientEnv } from '@/lib/env';
 
 export const metadata: Metadata = {
   title: 'AIMARKER - AI-Powered GCSE Marking 10x Faster',
   description:
-    'Get instant, accurate GCSE feedback in seconds with AI-powered marking. Mark practice papers 10x faster with advanced OCR technology. Join the waitlist for early access!',
+    'Get instant, accurate GCSE feedback in seconds with AI-powered marking. Mark practice papers 10x faster with advanced OCR technology. Always free, no signup required.',
   keywords: [
     'GCSE',
     'marking',
@@ -54,14 +53,14 @@ export const metadata: Metadata = {
     url: clientEnv.APP_URL,
     title: 'AIMARKER - AI-Powered GCSE Marking 10x Faster',
     description:
-      'Get instant, accurate GCSE feedback in seconds with AI-powered marking. Mark practice papers 10x faster with advanced OCR technology. Join the waitlist for early access!',
+      'Get instant, accurate GCSE feedback in seconds with AI-powered marking. Mark practice papers 10x faster with advanced OCR technology. Always free, no signup required.',
     siteName: 'AIMARKER',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'AIMARKER - AI-Powered GCSE Marking 10x Faster',
     description:
-      'Get instant, accurate GCSE feedback in seconds with AI-powered marking. Mark practice papers 10x faster with advanced OCR technology. Join the waitlist for early access!',
+      'Get instant, accurate GCSE feedback in seconds with AI-powered marking. Mark practice papers 10x faster with advanced OCR technology. Always free, no signup required.',
     creator: '@aimarker',
   },
 };
@@ -78,7 +77,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" data-scroll-behavior="smooth">
       <body className="antialiased bg-black text-white">
-        <AuthProvider>{children}</AuthProvider>
+        {children}
       </body>
     </html>
   );

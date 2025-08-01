@@ -1,0 +1,48 @@
+# Cloudflare Tunnel Configuration for OCR Service
+# This secures the connection between Cloudflare Workers and OCR service
+
+tunnel: aimarker-ocr-tunnel
+credentials-file: /path/to/credentials.json
+
+ingress:
+  # OCR Service Endpoint
+  - hostname: ocr-internal.aimarker.com
+    service: http://localhost:5000
+    originRequest:
+      # Security headers
+      httpHostHeader: ocr-internal.aimarker.com
+      # Connection settings
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      # Buffer settings for image uploads
+      noHappyEyeballs: false
+      keepAliveTimeout: 90s
+      # Additional security
+      disableChunkedEncoding: false
+  
+  # Health check endpoint
+  - hostname: ocr-health.aimarker.com
+    service: http://localhost:5000/health
+    originRequest:
+      httpHostHeader: ocr-health.aimarker.com
+      connectTimeout: 10s
+      tlsTimeout: 5s
+  
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Logging and monitoring
+logLevel: info
+logDirectory: /var/log/cloudflared
+logfile: /var/log/cloudflared/aimarker-ocr.log
+
+# Metrics for monitoring
+metrics: localhost:8080
+
+# Auto-update tunnel
+no-autoupdate: false
+
+# Connection settings
+protocol: quic
+retries: 3

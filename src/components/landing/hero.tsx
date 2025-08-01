@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,31 +13,11 @@ import {
   Shield,
   Lock,
   Award,
-  Sun,
-  Gift,
 } from 'lucide-react';
 import Link from 'next/link';
 import { LiveDemo } from './live-demo';
-import { isSummerPromotionActive } from '@/lib/auth';
 
 export function Hero() {
-  const [isSummerPromotion, setIsSummerPromotion] = useState(false);
-
-  useEffect(() => {
-    const checkPromotion = async () => {
-      try {
-        const isActive = await isSummerPromotionActive();
-        setIsSummerPromotion(isActive);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error checking summer promotion:', error);
-        setIsSummerPromotion(false);
-      }
-    };
-
-    checkPromotion();
-  }, []);
-
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Enhanced animated background */}
@@ -102,23 +81,16 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left side - Content */}
           <div className="text-center lg:text-left order-2 lg:order-1">
-            {/* Beta badge / Summer promotion */}
+            {/* Beta badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               className="mb-6"
             >
-              {isSummerPromotion ? (
-                <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 text-sm font-medium animate-pulse">
-                  <Sun className="h-4 w-4 mr-1" />
-                  Summer of Learning - All Pro Features Free!
-                </Badge>
-              ) : (
-                <Badge className="bg-blue-500 text-white px-4 py-2 text-sm font-medium">
-                  🚀 Now in Beta
-                </Badge>
-              )}
+              <Badge className="bg-blue-500 text-white px-4 py-2 text-sm font-medium">
+                🚀 Now in Beta
+              </Badge>
             </motion.div>
 
             {/* Main heading */}
@@ -129,9 +101,7 @@ export function Hero() {
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white mb-6 sm:mb-8 leading-none tracking-tight"
             >
               <span className="text-white">
-                {isSummerPromotion
-                  ? 'Get Smarter Feedback This Summer — For Free'
-                  : 'Smarter Feedback, Better Results'}
+                Smarter Feedback, Better Results
               </span>
             </motion.h1>
 
@@ -142,9 +112,7 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="text-xl sm:text-2xl md:text-3xl text-gray-300 mb-8 sm:mb-10 max-w-3xl mx-auto lg:mx-0 px-4 sm:px-0 leading-relaxed font-light"
             >
-              {isSummerPromotion
-                ? 'Experience our complete AI-powered marking platform with all Pro features unlocked free during our Summer of Learning promotion. OCR, unlimited marks, and advanced feedback — all yours at no cost!'
-                : 'The AI-powered marking assistant that provides instant, detailed feedback on student work. Built specifically for UK education standards with comprehensive GCSE support.'}
+              The AI-powered marking assistant that provides instant, detailed feedback on student work. Built specifically for UK education standards with comprehensive GCSE support.
             </motion.p>
 
             {/* Key benefits */}
@@ -214,7 +182,7 @@ export function Hero() {
                   size="lg"
                   className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white px-8 sm:px-12 py-6 sm:py-7 text-xl sm:text-2xl font-bold rounded-lg shadow-lg hover:shadow-2xl hover:shadow-green-500/25 transition-all duration-300"
                 >
-                  <Link href="/sign-up">Start Marking Free</Link>
+                  <Link href="/dashboard">Start Marking Free</Link>
                 </Button>
               </motion.div>
             </motion.div>
@@ -227,7 +195,7 @@ export function Hero() {
               className="text-center lg:text-left mb-8 sm:mb-10"
             >
               <p className="text-gray-400 text-sm font-medium">
-                ✨ No credit card required • Start your free trial today
+                ✨ No credit card required • Always free for students
               </p>
             </motion.div>
 
@@ -238,105 +206,51 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.5 }}
               className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-2xl mx-auto lg:mx-0 px-4 sm:px-0"
             >
-              {isSummerPromotion ? (
-                // Summer promotion stats
-                <>
-                  <motion.div
-                    className="text-center lg:text-left"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-center lg:justify-start mb-2">
-                      <Gift className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400 mr-2" />
-                      <span className="text-xl sm:text-2xl font-bold text-white">
-                        Everything FREE
-                      </span>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-400">
-                      200+ marks/day
-                    </p>
-                  </motion.div>
-                  <motion.div
-                    className="text-center lg:text-left"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-center lg:justify-start mb-2">
-                      <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-400 mr-2" />
-                      <span className="text-xl sm:text-2xl font-bold text-white">
-                        OCR Included
-                      </span>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-400">
-                      Pro features free
-                    </p>
-                  </motion.div>
-                  <motion.div
-                    className="text-center lg:text-left"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-center lg:justify-start mb-2">
-                      <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400 mr-2" />
-                      <span className="text-lg sm:text-2xl font-bold text-white">
-                        All Subjects
-                      </span>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-400">
-                      GCSE supported
-                    </p>
-                  </motion.div>
-                </>
-              ) : (
-                // Regular stats
-                <>
-                  <motion.div
-                    className="text-center lg:text-left"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-center lg:justify-start mb-2">
-                      <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400 mr-2" />
-                      <span className="text-xl sm:text-2xl font-bold text-white">
-                        Free
-                      </span>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-400">
-                      20 marks/day
-                    </p>
-                  </motion.div>
-                  <motion.div
-                    className="text-center lg:text-left"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-center lg:justify-start mb-2">
-                      <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400 mr-2" />
-                      <span className="text-xl sm:text-2xl font-bold text-white">
-                        Pro
-                      </span>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-400">
-                      200 marks/day
-                    </p>
-                  </motion.div>
-                  <motion.div
-                    className="text-center lg:text-left"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-center lg:justify-start mb-2">
-                      <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400 mr-2" />
-                      <span className="text-lg sm:text-2xl font-bold text-white">
-                        All Subjects
-                      </span>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-400">
-                      GCSE supported
-                    </p>
-                  </motion.div>
-                </>
-              )}
+              <motion.div
+                className="text-center lg:text-left"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center justify-center lg:justify-start mb-2">
+                  <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400 mr-2" />
+                  <span className="text-xl sm:text-2xl font-bold text-white">
+                    Free
+                  </span>
+                </div>
+                <p className="text-sm sm:text-base text-gray-400">
+                  200+ marks/day
+                </p>
+              </motion.div>
+              <motion.div
+                className="text-center lg:text-left"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center justify-center lg:justify-start mb-2">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400 mr-2" />
+                  <span className="text-xl sm:text-2xl font-bold text-white">
+                    OCR Included
+                  </span>
+                </div>
+                <p className="text-sm sm:text-base text-gray-400">
+                  Handwriting support
+                </p>
+              </motion.div>
+              <motion.div
+                className="text-center lg:text-left"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center justify-center lg:justify-start mb-2">
+                  <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400 mr-2" />
+                  <span className="text-lg sm:text-2xl font-bold text-white">
+                    All Subjects
+                  </span>
+                </div>
+                <p className="text-sm sm:text-base text-gray-400">
+                  GCSE supported
+                </p>
+              </motion.div>
             </motion.div>
           </div>
 

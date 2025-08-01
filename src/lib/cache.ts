@@ -1,12 +1,9 @@
 import { logger } from './logger';
-import { Redis } from '@upstash/redis';
 import { createHash } from 'crypto';
 import { MarkingRequest, MarkingResponse } from '@/types';
-import { getEnvVar } from '@/lib/cloudflare-env';
 import { WorkersCache } from '@/lib/workers-optimizations';
 
 class CacheService {
-  private redis: Redis | null = null;
   private workersCache: WorkersCache | null = null;
   private memoryCache = new Map<string, { data: any; expires: number }>();
   private readonly CACHE_TTL = 3600; // 1 hour in seconds
@@ -16,31 +13,21 @@ class CacheService {
     if (this.initialized) return;
 
     try {
-      const redisUrl = await getEnvVar('UPSTASH_REDIS_REST_URL');
-      const redisToken = await getEnvVar('UPSTASH_REDIS_REST_TOKEN');
-
-      if (redisUrl && redisToken) {
-        this.redis = new Redis({
-          url: redisUrl,
-          token: redisToken,
-        });
-      } else {
-        // Try to use Workers KV cache if available
-        try {
-          // @ts-ignore - Access Workers global bindings
-          const kvNamespace = globalThis.CACHE || globalThis.ENV?.CACHE;
-          if (kvNamespace) {
-            this.workersCache = new WorkersCache(kvNamespace);
-          }
-        } catch {
-          // Fall back to in-memory cache
+      // Try to use Workers KV cache if available
+      try {
+        // @ts-ignore - Access Workers global bindings
+        const kvNamespace = globalThis.CACHE || globalThis.ENV?.CACHE;
+        if (kvNamespace) {
+          this.workersCache = new WorkersCache(kvNamespace);
         }
+      } catch {
+        // Fall back to in-memory cache
+      }
 
-        if (!this.workersCache) {
-          logger.warn(
-            'Redis credentials not provided and Workers KV not available, using in-memory cache'
-          );
-        }
+      if (!this.workersCache) {
+        logger.warn(
+          'Workers KV not available, using in-memory cache'
+        );
       }
     } catch (error) {
       logger.error('Cache initialization error:', error);
@@ -69,12 +56,7 @@ class CacheService {
     const key = this.generateCacheKey(request);
 
     try {
-      if (this.redis) {
-        const cached = await this.redis.get(key);
-        if (cached) {
-          return cached as MarkingResponse;
-        }
-      } else if (this.workersCache) {
+      if (this.workersCache) {
         const cached = await this.workersCache.get<MarkingResponse>(key);
         if (cached) {
           return cached;
@@ -99,11 +81,7 @@ class CacheService {
     const key = this.generateCacheKey(request);
 
     try {
-      if (this.redis) {
-        await this.redis.set(key, JSON.stringify(response), {
-          ex: this.CACHE_TTL,
-        });
-      } else if (this.workersCache) {
+      if (this.workersCache) {
         await this.workersCache.set(key, response, this.CACHE_TTL);
       } else {
         this.memoryCache.set(key, {
@@ -133,16 +111,7 @@ class CacheService {
   async invalidatePattern(pattern: string): Promise<void> {
     await this.initialize();
 
-    if (this.redis) {
-      try {
-        const keys = await this.redis.keys(pattern);
-        if (keys.length > 0) {
-          await this.redis.del(...keys);
-        }
-      } catch (error) {
-        logger.error('Cache invalidation error:', error);
-      }
-    } else if (this.workersCache) {
+    if (this.workersCache) {
       // Workers KV doesn't support pattern matching, so we can't efficiently invalidate patterns
       logger.warn('Pattern invalidation not supported with Workers KV cache');
     } else {
@@ -163,7 +132,7 @@ class CacheService {
   }> {
     await this.initialize();
 
-    if (this.redis || this.workersCache) {
+    if (this.workersCache) {
       try {
         // External caches don't provide easy hit/miss stats
         return {

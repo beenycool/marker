@@ -19,27 +19,6 @@ export const env = {
     return getEnvVar('SUPABASE_SERVICE_ROLE_KEY');
   },
 
-  get STRIPE_SECRET_KEY() {
-    return getEnvVar('STRIPE_SECRET_KEY');
-  },
-
-  get STRIPE_WEBHOOK_SECRET() {
-    return getEnvVar('STRIPE_WEBHOOK_SECRET');
-  },
-
-  get STRIPE_PRO_MONTHLY_PRICE_ID() {
-    return (
-      getEnvVar('STRIPE_PRO_MONTHLY_PRICE_ID') ||
-      'price_1RksqiDb7SYU5gvXjID3h3H4'
-    );
-  },
-
-  get STRIPE_PRO_YEARLY_PRICE_ID() {
-    return (
-      getEnvVar('STRIPE_PRO_YEARLY_PRICE_ID') ||
-      'price_1RksqiDb7SYU5gvXjID3h3H4'
-    );
-  },
 
   get POSTHOG_KEY() {
     return getEnvVar('NEXT_PUBLIC_POSTHOG_KEY');

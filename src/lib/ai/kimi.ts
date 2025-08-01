@@ -57,14 +57,18 @@ export class KimiProvider extends BaseAIProvider {
   async mark(request: MarkingRequest): Promise<MarkingResponse> {
     try {
       const client = await this.getClient();
-      const prompt = this.buildPrompt(request);
+      const { systemPrompt, userPrompt } = this.buildPrompt(request);
 
       const response = await client.generate({
         model: this.model,
         messages: [
           {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
             role: 'user',
-            content: prompt,
+            content: userPrompt,
           },
         ],
         max_tokens: 2000,
@@ -77,9 +81,22 @@ export class KimiProvider extends BaseAIProvider {
         throw new Error('Empty response from AI model');
       }
 
-      return this.parseResponse(text, this.model);
+      // Parse the response first
+      const parsedResponse = this.parseResponse(text, this.model);
+      
+      // Validate quality and log for human review if needed
+      const { isValid, response: validatedResponse } = await this.validateAndLogResponse(
+        parsedResponse, 
+        request
+      );
+
+      if (!isValid) {
+        console.warn('AI response failed quality validation but proceeding anyway');
+      }
+
+      return validatedResponse;
     } catch (error) {
-      throw new Error('Failed to process marking request with Kimi');
+      throw new Error(`Failed to process marking request with Kimi: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

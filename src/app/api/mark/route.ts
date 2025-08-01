@@ -1,15 +1,13 @@
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getDb } from '@/lib/db';
-import { getCurrentUser, checkUsageLimit, incrementUsage } from '@/lib/auth';
+import { rateLimit } from '@/lib/rate-limit';
 import { aiRouter } from '@/lib/ai/router';
 import { MarkingRequest } from '@/types';
 import {
   GradeEnhancedMarkingService,
   EnhancedMarkingResponse,
 } from '@/lib/marking/grade-enhanced-marking';
-import { trackSubmissionCreated } from '@/lib/analytics';
 
 // Use Node.js runtime for Cloudflare compatibility
 export const runtime = 'nodejs';
@@ -34,6 +32,8 @@ const markingRequestSchema = z.object({
 
 /**
  * POST /api/mark - Submit work for AI marking
+ * GDPR-COMPLIANT: No personal data is stored in databases.
+ * All processing is ephemeral and results are returned directly.
  *
  * @param request - The request object
  * @returns A response with the marking results
@@ -51,22 +51,14 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    // Get the authenticated user
-    const user = await getCurrentUser();
-    if (!user) {
-      logger.warn('Authentication failed for POST /api/mark', { requestId });
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          requestId,
-        },
-        { status: 401 }
-      );
+    // Check anonymous rate limiting
+    const rateLimitResponse = await rateLimit(request);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
-    logger.info(`User ${user.id} authenticated for marking request`, {
+    logger.info('Anonymous user request for marking', {
       requestId,
-      userId: user.id,
     });
 
     // Parse and validate the request body
@@ -93,7 +85,6 @@ export async function POST(request: NextRequest) {
     if (!validatedData.success) {
       logger.warn('Validation failed for marking request', {
         requestId,
-        userId: user.id,
         errors: validatedData.error.errors,
       });
       return NextResponse.json(
@@ -108,35 +99,11 @@ export async function POST(request: NextRequest) {
 
     logger.info('Request body validated successfully', {
       requestId,
-      userId: user.id,
       questionLength: validatedData.data.question.length,
       answerLength: validatedData.data.answer.length,
       subject: validatedData.data.subject,
       examBoard: validatedData.data.examBoard,
     });
-
-    // Check usage limits
-    const usageCheck = await checkUsageLimit(user.id);
-    if (!usageCheck.canUse) {
-      logger.warn(`User ${user.id} has reached daily limit`, {
-        requestId,
-        userId: user.id,
-        usedToday: usageCheck.usedToday,
-        limit: usageCheck.limit,
-      });
-      return NextResponse.json(
-        {
-          error: 'Daily limit reached',
-          usage: {
-            used: usageCheck.usedToday,
-            limit: usageCheck.limit,
-            remaining: 0,
-          },
-          requestId,
-        },
-        { status: 429 }
-      );
-    }
 
     // Prepare the marking request
     const markingRequest: MarkingRequest = {
@@ -148,9 +115,8 @@ export async function POST(request: NextRequest) {
       examBoard: validatedData.data.examBoard,
     };
 
-    logger.info(`Processing marking request for user ${user.id}`, {
+    logger.info(`Processing marking request for anonymous user`, {
       requestId,
-      userId: user.id,
     });
 
     // Get AI marking response
@@ -158,16 +124,15 @@ export async function POST(request: NextRequest) {
     try {
       markingResponse = await aiRouter.mark(
         markingRequest,
-        user.subscriptionTier,
+        'FREE', // Anonymous users get free tier
         validatedData.data.preferredProvider,
-        user.id,
+        undefined, // No user ID for anonymous
         requestId
       );
       logger.info(
-        `Successfully received AI marking response for user ${user.id}`,
+        `Successfully received AI marking response for anonymous user`,
         {
           requestId,
-          userId: user.id,
           modelUsed: markingResponse.modelUsed,
           score: markingResponse.score,
         }
@@ -175,7 +140,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       logger.error('AI marking failed', {
         requestId,
-        userId: user.id,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
       });
@@ -202,7 +166,6 @@ export async function POST(request: NextRequest) {
           `Enhancing response with grade boundaries for subject ${validatedData.data.subjectCode}`,
           {
             requestId,
-            userId: user.id,
             subjectCode: validatedData.data.subjectCode,
           }
         );
@@ -213,13 +176,11 @@ export async function POST(request: NextRequest) {
           );
         logger.info(`Successfully enhanced response with grade boundaries`, {
           requestId,
-          userId: user.id,
           grade: enhancedResponse.grade,
         });
       } catch (error) {
         logger.warn('Failed to enhance with grade boundaries', {
           requestId,
-          userId: user.id,
           error: error instanceof Error ? error.message : 'Unknown error',
           subjectCode: validatedData.data.subjectCode,
         });
@@ -227,164 +188,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save submission to database
-    const client = await getDb();
-    const dbStartTime = Date.now();
-    const { data: submission, error: submissionError } = await client
-      .from('submissions')
-      .insert({
-        user_id: user.id,
-        question: markingRequest.question,
-        answer: markingRequest.answer,
-        mark_scheme: markingRequest.markScheme,
-        marks_total: markingRequest.marksTotal,
-        subject: markingRequest.subject,
-        exam_board: markingRequest.examBoard,
-        request_id: requestId,
-      })
-      .select('id, created_at')
-      .single();
-
-    const dbEndTime = Date.now();
-    logger.logDatabaseEvent({
-      userId: user.id,
-      sessionId: requestId,
-      operation: 'write',
-      table: 'submissions',
-      queryTimeMs: dbEndTime - dbStartTime,
-      success: !submissionError,
-    });
-
-    if (submissionError || !submission) {
-      logger.error('Supabase submission creation error', {
-        requestId,
-        userId: user.id,
-        error: submissionError,
-      });
-      return NextResponse.json(
-        {
-          error: 'Failed to create submission',
-          details:
-            'There was an issue saving your submission. Please try again.',
-          requestId,
-        },
-        { status: 500 }
-      );
-    }
-
-    logger.info(
-      `Submission ${submission.id} created successfully for user ${user.id}`,
-      {
-        requestId,
-        submissionId: submission.id,
-        userId: user.id,
-      }
-    );
-
-    // Track submission creation event
-    trackSubmissionCreated();
-
-    // Save feedback to database
-    const feedbackDbStartTime = Date.now();
-    const { data: feedback, error: feedbackError } = await client
-      .from('feedback')
-      .insert({
-        submission_id: submission.id,
-        ai_response: enhancedResponse.aiResponse,
-        score: enhancedResponse.score,
-        grade: enhancedResponse.grade,
-        aos_met: enhancedResponse.aosMet,
-        improvement_suggestions: enhancedResponse.improvementSuggestions,
-        model_used: enhancedResponse.modelUsed,
-        grade_boundaries: enhancedResponse.gradeBoundaries || null,
-        request_id: requestId,
-      })
-      .select('*')
-      .single();
-
-    const feedbackDbEndTime = Date.now();
-    logger.logDatabaseEvent({
-      userId: user.id,
-      sessionId: requestId,
-      operation: 'write',
-      table: 'feedback',
-      queryTimeMs: feedbackDbEndTime - feedbackDbStartTime,
-      success: !feedbackError,
-    });
-
-    if (feedbackError || !feedback) {
-      logger.error('Supabase feedback creation error', {
-        requestId,
-        submissionId: submission.id,
-        error: feedbackError,
-      });
-      return NextResponse.json(
-        {
-          error: 'Failed to create feedback',
-          details: 'There was an issue saving the feedback. Please try again.',
-          requestId,
-        },
-        { status: 500 }
-      );
-    }
-
-    logger.info(
-      `Feedback ${feedback.id} created successfully for submission ${submission.id}`,
-      {
-        requestId,
-        feedbackId: feedback.id,
-        submissionId: submission.id,
-      }
-    );
-
-    // Update usage count
-    await incrementUsage(user.id);
-    const updatedUsage = await checkUsageLimit(user.id);
-
-    logger.info(
-      `Usage updated for user ${user.id}: ${updatedUsage.usedToday}/${updatedUsage.limit}`,
-      {
-        requestId,
-        userId: user.id,
-        usedToday: updatedUsage.usedToday,
-        limit: updatedUsage.limit,
-      }
-    );
+    // GDPR-COMPLIANT: No database storage of personal data
+    // Analytics are handled client-side via localStorage only
 
     // Log successful API completion
     const totalResponseTime = Date.now() - startTime;
     logger.logAPIEvent({
       sessionId: requestId,
-      userId: user.id,
       endpoint: '/api/mark',
       method: 'POST',
       statusCode: 200,
       responseTimeMs: totalResponseTime,
     });
 
-    // Return success response
+    // Return success response with ephemeral data
     return NextResponse.json({
       success: true,
-      submission: {
-        id: submission.id,
-        createdAt: submission.created_at,
-      },
+      id: requestId, // Use request ID instead of database ID
       feedback: {
-        id: feedback.id,
-        score: feedback.score,
-        grade: feedback.grade,
-        aosMet: feedback.aos_met,
-        improvementSuggestions: feedback.improvement_suggestions,
-        aiResponse: feedback.ai_response,
-        modelUsed: feedback.model_used,
-        gradeBoundaries: feedback.grade_boundaries,
-      },
-      usage: {
-        used: updatedUsage.usedToday,
-        limit: updatedUsage.limit,
-        remaining: updatedUsage.limit - updatedUsage.usedToday,
+        score: enhancedResponse.score,
+        grade: enhancedResponse.grade,
+        aosMet: enhancedResponse.aosMet,
+        improvementSuggestions: enhancedResponse.improvementSuggestions,
+        aiResponse: enhancedResponse.aiResponse,
+        modelUsed: enhancedResponse.modelUsed,
+        gradeBoundaries: enhancedResponse.gradeBoundaries,
       },
       requestId,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     logger.error('Unexpected error in POST /api/mark', {
@@ -404,7 +235,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/mark - Get marking information
+ * GET /api/mark - Get marking information for anonymous users
  *
  * @param request - The request object
  * @returns A response with marking information
@@ -414,47 +245,18 @@ export async function GET() {
   logger.info('GET /api/mark request received', { requestId });
 
   try {
-    // Get the authenticated user
-    const user = await getCurrentUser();
-    if (!user) {
-      logger.warn('Authentication failed for GET /api/mark', { requestId });
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          requestId,
-        },
-        { status: 401 }
-      );
-    }
+    // Get available providers for anonymous users
+    const availableProviders = aiRouter.getProviderInfo('FREE');
 
-    logger.info(`User ${user.id} authenticated for GET /api/mark`, {
+    logger.info(`Returning marking info for anonymous user`, {
       requestId,
-      userId: user.id,
-    });
-
-    // Get usage information and available providers
-    const usageCheck = await checkUsageLimit(user.id);
-    const availableProviders = aiRouter.getProviderInfo(user.subscriptionTier);
-
-    logger.info(`Returning marking info for user ${user.id}`, {
-      requestId,
-      userId: user.id,
-      usedToday: usageCheck.usedToday,
-      limit: usageCheck.limit,
       providerCount: availableProviders.length,
     });
 
     // Return success response
     return NextResponse.json({
       success: true,
-      usage: {
-        used: usageCheck.usedToday,
-        limit: usageCheck.limit,
-        remaining: usageCheck.limit - usageCheck.usedToday,
-        canUse: usageCheck.canUse,
-      },
       providers: availableProviders,
-      userTier: user.subscriptionTier,
       requestId,
     });
   } catch (error) {

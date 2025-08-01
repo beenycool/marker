@@ -1,7 +1,6 @@
 import { MarkingRequest, MarkingResponse } from '@/types';
-import { promptEngine, PromptVariables } from './prompts/base-template';
-import { getAssessmentObjectives } from './prompts/assessment-objectives';
-import { AIResponseParser } from './response-parser';
+import { buildMarkingPrompt, MarkingContext } from '@/lib/prompt-templates';
+import { validateMarkingQuality, logForHumanReview } from '@/lib/marking-validator';
 
 export interface AIProvider {
   name: string;
@@ -57,31 +56,42 @@ export abstract class BaseAIProvider implements AIProvider {
     return 'U';
   }
 
-  protected buildPrompt(request: MarkingRequest): string {
-    const subject = request.subject || 'General GCSE';
-    const examBoard = request.examBoard || 'Generic';
-    const totalMarks = request.marksTotal || 20;
-
-    const variables: PromptVariables = {
-      subject,
-      examBoard,
-      totalMarks,
+  protected buildPrompt(request: MarkingRequest): { systemPrompt: string; userPrompt: string } {
+    const context: MarkingContext = {
       question: request.question,
       answer: request.answer,
       markScheme: request.markScheme,
-      assessmentObjectives: getAssessmentObjectives(subject),
+      totalMarks: request.marksTotal,
+      subject: request.subject,
+      examBoard: request.examBoard,
     };
 
-    const templateIds = [
-      'base-examiner',
-      'question-context',
-      'marking-criteria',
-      'feedback-structure',
-      'response-format',
-      'quality-standards',
-    ];
+    return buildMarkingPrompt(context);
+  }
 
-    return promptEngine.assemblePrompt(templateIds, variables);
+  protected async validateAndLogResponse(
+    response: any, 
+    request: MarkingRequest
+  ): Promise<{ isValid: boolean; response: any }> {
+    const validation = validateMarkingQuality(
+      response, 
+      request.subject, 
+      request.marksTotal
+    );
+
+    if (validation.humanReviewRequired) {
+      await logForHumanReview({
+        prompt: request.question,
+        aiResponse: response,
+        subject: request.subject,
+        validationErrors: validation.errors,
+      });
+    }
+
+    return {
+      isValid: validation.isValid,
+      response: response
+    };
   }
 
   /**

@@ -81,6 +81,8 @@ export function MarkingForm() {
   const [isMarking, setIsMarking] = useState(false);
   const [isCoolingDown, setIsCoolingDown] = useState(false);
   const [cooldownTime, setCooldownTime] = useState(0);
+  const [originalAnswer, setOriginalAnswer] = useState<string>('');
+  const [originalQuestion, setOriginalQuestion] = useState<string>('');
   const markSubmission = useMarkSubmission();
   const { toast } = useToast();
 
@@ -101,6 +103,10 @@ export function MarkingForm() {
     try {
       // Optimistic update: show marking in progress state immediately
       setIsMarking(true);
+      
+      // Store original data for clarification feature
+      setOriginalAnswer(data.answer);
+      setOriginalQuestion(data.question);
 
       // Reset form immediately to allow new submissions
       form.reset();
@@ -117,6 +123,30 @@ export function MarkingForm() {
 
       // Update feedback when API call completes
       setFeedback(result);
+      
+      // Save simplified result to localStorage for local dashboard
+      const simplifiedResult = {
+        id: result.id || Date.now().toString(),
+        score: result.feedback.score,
+        grade: result.feedback.grade,
+        subject: data.subject || null,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Get existing history and add new result
+      const existingHistory = localStorage.getItem('aimarker_history');
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      history.push(simplifiedResult);
+      
+      // Keep only last 50 submissions to prevent localStorage bloat
+      const trimmedHistory = history.slice(-50);
+      localStorage.setItem('aimarker_history', JSON.stringify(trimmedHistory));
+      
+      // Dispatch custom event to notify other components of update
+      window.dispatchEvent(new CustomEvent('localHistoryUpdate', { 
+        detail: trimmedHistory 
+      }));
+      
       setIsMarking(false);
 
       // Start cooldown timer
@@ -185,6 +215,7 @@ export function MarkingForm() {
                           placeholder="Paste your GCSE question here..."
                           className="bg-white/10 border-white/20 text-white placeholder-gray-400 min-h-[100px]"
                           aria-describedby="question-description"
+                          data-tour="question-input"
                         />
                       </FormControl>
                       <FormDescription
@@ -212,6 +243,7 @@ export function MarkingForm() {
                           placeholder="Type or paste your answer here..."
                           className="bg-white/10 border-white/20 text-white placeholder-gray-400 min-h-[120px]"
                           aria-describedby="answer-description"
+                          data-tour="answer-input"
                         />
                       </FormControl>
                       <FormDescription
@@ -237,7 +269,7 @@ export function MarkingForm() {
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                            <SelectTrigger className="bg-white/10 border-white/20 text-white" data-tour="subject-select">
                               <SelectValue placeholder="Select subject" />
                             </SelectTrigger>
                           </FormControl>
@@ -333,6 +365,7 @@ export function MarkingForm() {
                           placeholder="Paste the mark scheme if available..."
                           className="bg-white/10 border-white/20 text-white placeholder-gray-400 min-h-[80px]"
                           aria-describedby="mark-scheme-description"
+                          data-tour="mark-scheme"
                         />
                       </FormControl>
                       <FormDescription
@@ -350,6 +383,7 @@ export function MarkingForm() {
                   type="submit"
                   disabled={!canSubmit}
                   className="w-full bg-blue-600 text-white"
+                  data-tour="submit-button"
                 >
                   {isMarking ? (
                     <>
@@ -371,7 +405,15 @@ export function MarkingForm() {
         </Card>
 
         {/* Feedback Display */}
-        {feedback && <FeedbackDisplay feedback={feedback} />}
+        {feedback && (
+          <FeedbackDisplay 
+            feedback={{
+              ...feedback,
+              originalAnswer,
+              originalQuestion
+            }} 
+          />
+        )}
         {isMarking && !feedback && (
           <Card className="bg-white/5 backdrop-blur-sm border-white/10">
             <CardHeader>
