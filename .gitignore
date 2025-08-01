@@ -14,7 +14,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .pnpm-debug.log*
-
+ocr-service/venv/
 # Testing
 /coverage
 *.lcov
